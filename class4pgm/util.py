@@ -1,0 +1,18 @@
+def quote_string(v):
+    """
+    Copy from RedisGraph
+    quote_string wraps given v with quotes incase
+    v is a string.
+    """
+    if not isinstance(v, str):
+        return v
+    if len(v) == 0:
+        return '""'
+
+    if v[0] != '"':
+        v = '"' + v
+
+    if v[-1] != '"':
+        v = v + '"'
+
+    return v
