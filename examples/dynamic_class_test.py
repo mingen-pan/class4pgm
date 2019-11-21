@@ -1,9 +1,8 @@
-from class4pgm.dynamic_class import DynamicClassDto, ClassCollection
-from class4pgm.field import String, Int
+from class4pgm.dynamic_class import ClassDefinitionWrapper, ClassManager, ClassDefinition
+from class4pgm.field import String, Int, List
 from class4pgm.node import NodeModel
 from class4pgm.edge import EdgeModel
 from class4pgm.service.base_service import BaseService
-
 
 
 class Person(NodeModel):
@@ -28,19 +27,19 @@ class Teach(EdgeModel):
     pass
 
 
-dto_list = [
-    DynamicClassDto.load(Person),
-    DynamicClassDto.load(Student),
-    DynamicClassDto.load(Teacher),
-    DynamicClassDto.load(IntlStudent),
-    DynamicClassDto.load(Teach),
+definitions = [
+    ClassDefinition.resolve(Person),
+    ClassDefinition.resolve(Student),
+    ClassDefinition.resolve(Teacher),
+    ClassDefinition.resolve(IntlStudent),
+    ClassDefinition.resolve(Teach),
 ]
 
 service = BaseService()
-collection = ClassCollection(dto_list)
-InstStudent = collection.get('IntlStudent')
-Teacher = collection.get('Teacher')
-Teach = collection.get('Teach')
+manager = ClassManager(service, definitions)
+InstStudent = manager.get('IntlStudent')
+Teacher = manager.get('Teacher')
+Teach = manager.get('Teach')
 
 tom = InstStudent(name="Tom", age=26, school='Foo School', country="No Country")
 anne = Teacher(name="Anne", age=35, subject="Sleep Science")
@@ -52,28 +51,24 @@ print(anne)
 print(teach)
 print("\n\n\n", end='')
 
-exit(1)
+# exit(1)
 # %% Integration test with Redis
 import redis
 import json
 
-from grapharcana.dialects.redisgraph.mixin import Mixin
-from grapharcana.ogm.graph import Graph
-from grapharcana.dialects.query import Query
+from class4pgm.field import String, Int, List, Bool
+from class4pgm.dynamic_class import ClassManager, ClassDefinition
+from class4pgm.field import String, Int, List
+from class4pgm.node import NodeModel
+from class4pgm.service.base_service import BaseService
 
 
 # This creates a GraphArcana Graph class with the redisgraph Mixin
-class ClassGraph(Mixin, Graph):
-    def __init__(self, *args):
-        super().__init__(*args)
 
 
 # This is the redis specific code that will be abstracted into a db connection API
-db = redis.Redis(host='localhost', port=6379, decode_responses=True)
-arcana = ClassGraph('classes', db)
 
-
-class BioNode(Vertex):
+class BioNode(NodeModel):
     element_type = 'BioNode'
     element_plural = 'BioNodes'
 
@@ -91,7 +86,7 @@ class Circuit(BioNode):
     name = String(nullable=False, unique=False)
 
 
-class Species(Vertex):
+class Species(NodeModel):
     element_type = 'Species'
     element_plural = 'Species'
 
@@ -106,30 +101,44 @@ class FruitFly(Species):
     lived = Bool()
 
 
-dto_list = [
-    DynamicClassDto.load(BioNode),
-    DynamicClassDto.load(Neuropil),
-    DynamicClassDto.load(Circuit),
-    DynamicClassDto.load(Species),
-    DynamicClassDto.load(FruitFly),
+class Own(EdgeModel):
+    pass
+
+
+definitions = [
+    ClassDefinition.resolve(BioNode),
+    ClassDefinition.resolve(Neuropil),
+    ClassDefinition.resolve(Circuit),
+    ClassDefinition.resolve(Species),
+    ClassDefinition.resolve(FruitFly),
+    ClassDefinition.resolve(Own),
 ]
 
-for dto in dto_list:
-    arcana.create(DynamicClassDto, **dto.properties())
+service = BaseService()
+manager = ClassManager(service, definitions)
 
-class_filter = Query()
-class_filter.MATCH(DynamicClassDto, True)
-print(class_filter)
+Circuit = manager.get('Circuit')
+FruitFly = manager.get('FruitFly')
+Own = manager.get('Own')
 
-query_result = arcana.all(class_filter)
-dto_list = [result[0] for result in query_result]
-collection = ClassCollection(dto_list)
-Circuit = collection.get('Circuit')
-FruitFly = collection.get('FruitFly')
-
-c = Circuit(name='circuit-1')
-print(c.properties())
 fly = FruitFly(id="No. 1", sex='male', age=3, location='Mars', lived=True)
-print(fly.properties())
-arcana.delete()
+c = Circuit(name='circuit-1')
+own = Own(in_node=fly, out_node=c)
+print(fly)
+print(own)
+print(c)
 
+n = manager.service.to_node(fly)
+print(n)
+fly = manager.service.to_node_model(n)
+print(fly)
+
+n = manager.service.to_node(c)
+print(n)
+c = manager.service.to_node_model(n)
+print(c)
+
+e = manager.service.to_edge(own)
+print(e)
+own = manager.service.to_edge_model(e)
+print(own)

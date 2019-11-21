@@ -2,7 +2,9 @@ from class4pgm.edge import EdgeModel
 from class4pgm.field import Field
 import json
 
+import class4pgm.service.base_service as base_service
 from class4pgm.node import NodeModel
+
 
 
 def init_factory(instance_properties, parent_classes):
@@ -28,26 +30,52 @@ def init_factory(instance_properties, parent_classes):
 
     def init(self, **kwargs):
         for name, field in instance_properties.items():
-            value = None
-            if name in kwargs:
-                value = kwargs[name]
-                kwargs.pop(name)
-            self.__dict__[name] = field.validate(value)
+            value = kwargs.pop(name, None)
+            self.__dict__[name] = value
         for parent_class in parent_classes:
             parent_class.__init__(self, **kwargs)
 
     return init
 
 
-class DynamicClassMetaData:
+class ClassDefinition:
+    primitive_types = {int, float, str, bool}
+    collection_types = {list, set, dict}
+
     def __init__(self, class_name, parent_classes, class_attributes, instance_properties):
         self.class_name = class_name
         self.parent_classes = parent_classes
         self.class_attributes = class_attributes
         self.instance_properties = instance_properties
 
+    def wrap(self):
+        class_attributes = json.loads(self.class_attributes)
+        instance_properties = json.loads(self.instance_properties)
+        return ClassDefinitionWrapper(self.class_name, self.class_attributes,
+                                      class_attributes, instance_properties)
 
-class DynamicClassDto(object):
+    @classmethod
+    def resolve(cls, def_form):
+        assert type(def_form) is type, "input must be a class/type"
+        class_name = def_form.__name__
+        parent_classes = []
+        for parent in def_form.__bases__:
+            parent_classes.append(parent.__name__)
+
+        class_attributes = {}
+        instance_properties = {}
+        for key, value in vars(def_form).items():
+            if len(key) > 2 and key[:2] == "__":
+                continue
+            if type(value) in cls.primitive_types:
+                class_attributes[key] = value
+            elif isinstance(value, Field):
+                instance_properties[key] = value
+        return cls(class_name=class_name, parent_classes=parent_classes, class_attributes=class_attributes,
+                   instance_properties=instance_properties)
+
+
+class ClassDefinitionWrapper(NodeModel):
     """
     Data Transfer Object (DTO) class for dynamic classes. The instances of this are used to store
     metadata of a class into graph databases. The metadata contain class name, parent classes,
@@ -63,8 +91,6 @@ class DynamicClassDto(object):
     :param instance_properties: Set or List of Strings
 
     """
-    primitive_types = {int, float, str, bool}
-    collection_types = {list, set, dict}
 
     def __init__(self, class_name, parent_classes, class_attributes, instance_properties):
         self.class_name = class_name
@@ -72,6 +98,7 @@ class DynamicClassDto(object):
         self.class_attributes = class_attributes
         self.instance_properties = instance_properties
         self._attribute_check()
+        super().__init__()
 
     def _attribute_check(self):
         assert isinstance(self.class_name, str) and len(self.class_name) > 0, \
@@ -107,14 +134,6 @@ class DynamicClassDto(object):
                 instance_properties[name] = field.encode()
             self.instance_properties = json.dumps(instance_properties)
 
-    # def property(self):
-    #     return {
-    #         "class_name": self.class_name,
-    #         "parent_classes": self.parent_classes,
-    #         "class_attributes": self.class_attributes,
-    #         "instance_properties": self.instance_properties
-    #     }
-
     def unpack(self):
         try:
             class_attributes = json.loads(self.class_attributes)
@@ -128,30 +147,10 @@ class DynamicClassDto(object):
         except ValueError:
             raise ValueError("instance_properties is not a valid JSON")
 
-        return DynamicClassMetaData(self.class_name, self.parent_classes, class_attributes, instance_properties)
-
-    @classmethod
-    def load(cls, clazz):
-        assert type(clazz) is type, "input must be a class/type"
-        class_name = clazz.__name__
-        parent_classes = []
-        for parent in clazz.__bases__:
-            parent_classes.append(parent.__name__)
-
-        class_attributes = {}
-        instance_properties = {}
-        for key, value in clazz.__dict__.items():
-            if len(key) > 2 and key[:2] == "__":
-                continue
-            if type(value) in cls.primitive_types:
-                class_attributes[key] = value
-            elif isinstance(value, Field):
-                instance_properties[key] = value
-        return cls(class_name=class_name, parent_classes=parent_classes, class_attributes=class_attributes,
-                   instance_properties=instance_properties)
+        return ClassDefinition(self.class_name, self.parent_classes, class_attributes, instance_properties)
 
 
-class ClassCollection:
+class ClassManager:
     """
     A class to convert DynamicClassDTO instances to dynamic classes. It will resolve class inheritance
     based on Depth-first Search. It uses lazy initialization to build dynamic classes. They are built
@@ -177,41 +176,44 @@ class ClassCollection:
         get the dynamic class with `name`. It will built this class and its parent classes automatically.
     """
 
-    def __init__(self, class_dto_list):
-        self.dto_dict = {}
+    def __init__(self, service: base_service.BaseService, class_definitions=None):
+        self.definition_dict = {}
         self.classes = {
             "NodeModel": NodeModel,
             "EdgeModel": EdgeModel
         }
-        self.add(class_dto_list)
+        self.add(class_definitions)
+        service.class_manager = self
+        self.service = service
 
-    def add(self, dto):
-        if isinstance(dto, DynamicClassDto):
-            self.dto_dict[dto.class_name] = dto
-        elif isinstance(dto, list):
-            for each_dto in dto:
+    def add(self, definition):
+        if isinstance(definition, ClassDefinition):
+            self.definition_dict[definition.class_name] = definition
+        elif isinstance(definition, ClassDefinitionWrapper):
+            self.definition_dict[definition.class_name] = definition.unpack()
+        elif isinstance(definition, list):
+            for each_dto in definition:
                 self.add(each_dto)
-        elif not dto:
+        elif not definition:
             return
         else:
-            raise Exception(f"unknown type for {dto}")
+            raise Exception(f"unknown type for {definition}")
 
     def build(self):
-        for name in self.dto_dict.keys():
+        for name in self.definition_dict.keys():
             self.get(name)
         return self.classes
 
     def get(self, name):
         if name in self.classes:
             return self.classes[name]
-        if name not in self.dto_dict:
-            raise Exception(f"{name} does not exist in this class collection")
-        dto = self.dto_dict[name]
-        metadata = dto.unpack()
-        parent_classes = tuple(self.get(name) for name in dto.parent_classes)
+        if name not in self.definition_dict:
+            raise Exception(f"{name} does not exist in this class manager")
+        definition = self.definition_dict[name]
+        parent_classes = tuple(self.get(name) for name in definition.parent_classes)
         class_attributes = {
-            **metadata.class_attributes,
-            "__init__": init_factory(metadata.instance_properties, parent_classes)
+            **definition.class_attributes,
+            "__init__": init_factory(definition.instance_properties, parent_classes)
         }
         self.classes[name] = type(name, parent_classes, class_attributes)
         return self.classes[name]

@@ -1,3 +1,7 @@
+import random
+import string
+
+
 def quote_string(v):
     """
     Copy from RedisGraph
@@ -16,3 +20,10 @@ def quote_string(v):
         v = v + '"'
 
     return v
+
+
+def random_string(length=10):
+    """
+    Returns a random N chracter long string.
+    """
+    return ''.join(random.choice(string.ascii_lowercase) for x in range(length))
