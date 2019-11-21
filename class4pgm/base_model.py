@@ -1,7 +1,5 @@
 import re
 
-from class4pgm.util import quote_string
-
 
 class BaseModel(object):
 

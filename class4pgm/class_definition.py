@@ -1,10 +1,8 @@
-from class4pgm.edge import EdgeModel
+from class4pgm import NodeModel, EdgeModel
 from class4pgm.field import Field
 import json
 
 import class4pgm.service.base_service as base_service
-from class4pgm.node import NodeModel
-
 
 
 def init_factory(instance_properties, parent_classes):
@@ -49,9 +47,12 @@ class ClassDefinition:
         self.instance_properties = instance_properties
 
     def wrap(self):
-        class_attributes = json.loads(self.class_attributes)
-        instance_properties = json.loads(self.instance_properties)
-        return ClassDefinitionWrapper(self.class_name, self.class_attributes,
+        class_attributes = json.dumps(self.class_attributes)
+        instance_properties = {
+            key: Field.encode(value) for key, value in self.instance_properties.items()
+        }
+        instance_properties = json.dumps(instance_properties)
+        return ClassDefinitionWrapper(self.class_name, self.parent_classes,
                                       class_attributes, instance_properties)
 
     @classmethod
@@ -92,13 +93,13 @@ class ClassDefinitionWrapper(NodeModel):
 
     """
 
-    def __init__(self, class_name, parent_classes, class_attributes, instance_properties):
+    def __init__(self, class_name, parent_classes, class_attributes, instance_properties, **kwargs):
         self.class_name = class_name
         self.parent_classes = parent_classes
         self.class_attributes = class_attributes
         self.instance_properties = instance_properties
         self._attribute_check()
-        super().__init__()
+        super().__init__(**kwargs)
 
     def _attribute_check(self):
         assert isinstance(self.class_name, str) and len(self.class_name) > 0, \
@@ -111,7 +112,7 @@ class ClassDefinitionWrapper(NodeModel):
         elif isinstance(self.class_attributes, str):
             try:
                 json.loads(self.class_attributes)
-            except ValueError as e:
+            except ValueError:
                 raise ValueError("class_attributes is not a valid JSON")
         elif isinstance(self.class_attributes, dict):
             self.class_attributes = json.dumps(self.class_attributes)
@@ -125,7 +126,7 @@ class ClassDefinitionWrapper(NodeModel):
                 instance_properties = json.loads(self.instance_properties)
                 for key, value in instance_properties.items():
                     Field.decode(value)
-            except ValueError as e:
+            except ValueError:
                 raise ValueError("instance_properties is not a valid JSON")
         elif isinstance(self.instance_properties, dict):
             instance_properties = {}
@@ -180,20 +181,36 @@ class ClassManager:
         self.definition_dict = {}
         self.classes = {
             "NodeModel": NodeModel,
-            "EdgeModel": EdgeModel
+            "EdgeModel": EdgeModel,
+            "ClassDefinitionWrapper": ClassDefinitionWrapper
         }
         self.add(class_definitions)
         service.class_manager = self
         self.service = service
+        self.fetch_class_definitions()
+
+    def fetch_class_definitions(self):
+        wrappers = self.service.fetch_class_definition_wrappers()
+        self.add(wrappers)
+
+    def add_raw_definition(self, raw_definition):
+        if isinstance(raw_definition, type):
+            definition = ClassDefinition.resolve(raw_definition)
+            self.add(definition)
+        elif isinstance(raw_definition, list):
+            definitions = [ClassDefinition.resolve(element) for element in raw_definition]
+            self.add(definitions)
 
     def add(self, definition):
         if isinstance(definition, ClassDefinition):
             self.definition_dict[definition.class_name] = definition
+            self.service.upload_class_definition_wrapper(definition.wrap())
         elif isinstance(definition, ClassDefinitionWrapper):
             self.definition_dict[definition.class_name] = definition.unpack()
+            self.service.upload_class_definition_wrapper(definition)
         elif isinstance(definition, list):
-            for each_dto in definition:
-                self.add(each_dto)
+            for each_def in definition:
+                self.add(each_def)
         elif not definition:
             return
         else:

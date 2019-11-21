@@ -4,41 +4,6 @@ from class4pgm.base_model import BaseModel
 from class4pgm.util import quote_string
 
 
-class Node(object):
-    def __init__(self, alias=None, labels: list = None, properties: dict = None, _id=None):
-        if labels is None:
-            labels = []
-        if properties is None:
-            properties = {}
-        self.alias = alias
-        self._id = _id
-        self.labels = labels
-        self.properties = properties
-
-    @property
-    def id(self):
-        return self._id
-
-    @id.setter
-    def id(self, val):
-        self._id = val
-
-    def __str__(self):
-        """
-        Copy from RedisGraph
-        :return:
-        """
-        res = ['(']
-        if self.labels:
-            res.append(':' + ":".join(self.labels))
-        if self.properties:
-            props = ','.join(key + ':' + str(quote_string(val)) for key, val in self.properties.items())
-            res.append(' {' + props + '} ')
-        res += ')'
-
-        return ''.join(res)
-
-
 class NodeModel(BaseModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
