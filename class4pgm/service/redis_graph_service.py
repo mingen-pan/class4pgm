@@ -69,12 +69,22 @@ class RedisGraphService(BaseService):
             wrapper.instance_properties = wrapper.instance_properties.replace('"', '\\"')
             wrapper.class_attributes = wrapper.class_attributes.replace('"', '\\"')
             node = self.model_to_node(wrapper)
+
+            # Check if a class definition has already existed!
+            node.alias = "a"
+            result = self.redis_graph.query(f"Match ({node.alias}:ClassDefinitionWrapper "
+                                            f"{{class_name: \"{wrapper.class_name}\"}}) "
+                                            f"return count({node.alias}) as cnt")
+            if result.result_set and result.result_set[0][0] > 0:
+                return False
+
             self.redis_graph.add_node(node)
             self.redis_graph.flush()
+            return True
 
     def fetch_class_definition_wrappers(self):
         if not self.redis_graph:
-            return None
+            return []
         q_str = """Match (p:ClassDefinitionWrapper) return p"""
         results = self.redis_graph.query(q_str)
         if len(results.result_set) == 0:

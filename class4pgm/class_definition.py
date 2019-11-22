@@ -184,42 +184,56 @@ class ClassManager:
             "EdgeModel": EdgeModel,
             "ClassDefinitionWrapper": ClassDefinitionWrapper
         }
-        self.add(class_definitions)
+        self.insert(class_definitions)
         service.class_manager = self
         self.service = service
         self.fetch_class_definitions()
 
     def fetch_class_definitions(self):
         wrappers = self.service.fetch_class_definition_wrappers()
-        self._add(wrappers, upload=False)
+        self._insert(wrappers, upload=False)
 
-    def add_raw_definition(self, raw_definition, upload=True):
+    def insert_raw_definition(self, raw_definition, upload=True):
         if isinstance(raw_definition, type):
             definition = ClassDefinition.resolve(raw_definition)
-            self._add(definition, upload=upload)
+            return self._insert([definition], upload=upload)[0]
         elif isinstance(raw_definition, list):
             definitions = [ClassDefinition.resolve(element) for element in raw_definition]
-            self._add(definitions, upload=upload)
+            return self._insert(definitions, upload=upload)
 
-    def add(self, definition, upload=True):
-        self._add(definition, upload=upload)
-
-    def _add(self, definition, upload):
-        if isinstance(definition, ClassDefinition):
-            self.definition_dict[definition.class_name] = definition
-            if upload:
-                self.service.upload_class_definition_wrapper(definition.wrap())
-        elif isinstance(definition, ClassDefinitionWrapper):
-            self.definition_dict[definition.class_name] = definition.unpack()
-            if upload:
-                self.service.upload_class_definition_wrapper(definition)
-        elif isinstance(definition, list):
-            for each_def in definition:
-                self._add(each_def, upload=upload)
-        elif not definition:
-            return
+    def insert(self, definition, upload=True):
+        if isinstance(definition, list):
+            return self._insert(definition, upload=upload)
         else:
-            raise Exception(f"unknown type for {definition}")
+            return self._insert([definition], upload=upload)[0]
+
+    def _insert(self, definitions: list, upload):
+        if len(definitions) == 0:
+            return []
+        definitions = self._type_check_before_insert(definitions)
+        results = [None] * len(definitions)
+        for i, definition in enumerate(definitions):
+            if not definition:
+                results[i] = False
+                continue
+            if upload:
+                results[i] = self.service.upload_class_definition_wrapper(definition.wrap())
+            else:
+                results[i] = definition.class_name not in self.definition_dict
+            # if a class has existed, then this class definition will not be inserted.
+            if results[i]:
+                self.definition_dict[definition.class_name] = definition
+        return results
+
+    def _type_check_before_insert(self, definitions: list):
+        res = [None] * len(definitions)
+        for i, definition in enumerate(definitions):
+            if isinstance(definition, ClassDefinition):
+                res[i] = definition
+            elif isinstance(definition, ClassDefinitionWrapper):
+                res[i] = definition.unpack()
+        return res
+
 
     def build(self):
         for name in self.definition_dict.keys():

@@ -103,4 +103,8 @@ class Graph(object):
         self.edges[edge.alias] = edge
 
     def add_class_definition(self, definition: Node):
-        self.class_defintions[definition.properties["class_name"]] = definition
+        if definition.properties["class_name"] not in self.class_defintions:
+            self.class_defintions[definition.properties["class_name"]] = definition
+            return True
+        else:
+            return False

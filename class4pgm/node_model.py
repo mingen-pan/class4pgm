@@ -15,9 +15,6 @@ class NodeModel(BaseModel):
             "properties": self.get_properties()
         }
 
-    def __str__(self):
-        return '(' + self.print_body() + ')'
-
     def get_labels(self):
         labels = []
         explored = set()
@@ -32,12 +29,15 @@ class NodeModel(BaseModel):
             to_explore.extend(cur.__bases__)
         return labels
 
-    def print_body(self):
-        res = []
+    def __str__(self):
+        res = ['(']
+        if self._alias:
+            res.append(self._alias)
         if self._labels:
             res.append(':' + ":".join(self._labels))
-            props = self.get_properties()
+        props = self.get_properties()
+        if props:
             prop_str = ','.join(key + ':' + str(quote_string(val)) for key, val in props.items())
             res.append(' {' + prop_str + '}')
-
+        res.append(')')
         return ''.join(res)

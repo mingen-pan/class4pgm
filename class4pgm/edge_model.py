@@ -1,3 +1,4 @@
+from class4pgm import NodeModel
 from class4pgm.base_model import BaseModel
 from class4pgm.util import quote_string
 
@@ -18,15 +19,27 @@ class EdgeModel(BaseModel):
     def get_relationship(self):
         return self._relationship
 
-    def __str__(self):
-        return '-[' + self.print_body() + ']->'
+        # return '-[' + self.print_body() + ']->'
 
-    def print_body(self):
+    def __str__(self):
         res = []
+        if isinstance(self._in_node, NodeModel):
+            res.append(str(self._in_node))
+        else:
+            res.append('()')
+
+        res.append('-[')
         if self._relationship:
             res.append(':' + self._relationship)
         props = self.get_properties()
-        prop_str = ','.join(key + ':' + str(quote_string(val)) for key, val in props.items())
-        res.append(' {' + prop_str + '}')
+        if props:
+            prop_str = ','.join(key + ':' + str(quote_string(val)) for key, val in props.items())
+            res.append(' {' + prop_str + '}')
+        res.append(']->')
+
+        if isinstance(self._out_node, NodeModel):
+            res.append(str(self._out_node))
+        else:
+            res.append('()')
 
         return ''.join(res)

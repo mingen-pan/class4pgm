@@ -11,11 +11,13 @@ from examples import definition_forms
 
 
 class TestClassManager(unittest.TestCase):
+    def setUp(self) -> None:
+        self.r = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
     def test_basic_a(self):
-        service = BaseService()
+        service = BaseService(base_element.Graph("test_a"))
         manager = ClassManager(service)
-        manager.add_raw_definition(definition_forms.test_a_definition_forms)
+        manager.insert_raw_definition(definition_forms.test_a_definition_forms)
         InstStudent = manager.get('IntlStudent')
         Teacher = manager.get('Teacher')
         Teach = manager.get('Teach')
@@ -35,7 +37,7 @@ class TestClassManager(unittest.TestCase):
         graph = base_element.Graph("test")
         service = BaseService(graph=graph)
         old_manager = ClassManager(service)
-        old_manager.add_raw_definition(definition_forms.test_b_definition_forms)
+        old_manager.insert_raw_definition(definition_forms.test_b_definition_forms)
 
         manager = ClassManager(service)
 
@@ -66,11 +68,10 @@ class TestClassManager(unittest.TestCase):
         print(own)
 
     def test_on_redis_graph(self):
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
-        redis_graph = redisgraph.Graph('school', r)
+        redis_graph = redisgraph.Graph('school', self.r)
         service = RedisGraphService(redis_graph=redis_graph)
         old_manager = ClassManager(service)
-        old_manager.add_raw_definition(definition_forms.test_a_definition_forms)
+        old_manager.insert_raw_definition(definition_forms.test_a_definition_forms)
 
         # get all the classes
         IntlStudent = old_manager.get("IntlStudent")
@@ -105,7 +106,16 @@ class TestClassManager(unittest.TestCase):
 
         redis_graph.delete()
 
-
+    def test_duplicate_upload_class(self):
+        redis_graph = redisgraph.Graph('duplicate_upload_class', self.r)
+        service = RedisGraphService(redis_graph=redis_graph)
+        manager = ClassManager(service)
+        manager.insert_raw_definition(definition_forms.test_a_definition_forms)
+        manager.insert_raw_definition(definition_forms.test_a_definition_forms)
+        manager.insert_raw_definition(definition_forms.test_a_definition_forms)
+        result = redis_graph.query("""Match (a:ClassDefinitionWrapper) return count(a) as cnt""")
+        self.assertEqual(result.result_set[0][0], len(definition_forms.test_a_definition_forms))
+        redis_graph.delete()
 
 if __name__ == '__main__':
     unittest.main()

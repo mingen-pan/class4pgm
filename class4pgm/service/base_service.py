@@ -83,9 +83,11 @@ class BaseService:
     def upload_class_definition_wrapper(self, wrapper):
         if isinstance(wrapper, class4pgm.ClassDefinitionWrapper) and self.graph:
             node = self.model_to_node(wrapper)
-            self.graph.add_class_definition(node)
+            return self.graph.add_class_definition(node)
+        return False
 
     def fetch_class_definition_wrappers(self):
         if self.graph:
             nodes = self.graph.class_defintions.values()
             return [self.node_to_model(node) for node in nodes]
+        return []
