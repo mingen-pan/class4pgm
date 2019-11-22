@@ -1,8 +1,8 @@
-from class4pgm import NodeModel, EdgeModel
-from class4pgm.field import Field
 import json
 
 import class4pgm.service.base_service as base_service
+from class4pgm import NodeModel, EdgeModel
+from class4pgm.field import Field
 
 
 def init_factory(instance_properties, parent_classes):
@@ -191,26 +191,31 @@ class ClassManager:
 
     def fetch_class_definitions(self):
         wrappers = self.service.fetch_class_definition_wrappers()
-        self.add(wrappers)
+        self._add(wrappers, upload=False)
 
-    def add_raw_definition(self, raw_definition):
+    def add_raw_definition(self, raw_definition, upload=True):
         if isinstance(raw_definition, type):
             definition = ClassDefinition.resolve(raw_definition)
-            self.add(definition)
+            self._add(definition, upload=upload)
         elif isinstance(raw_definition, list):
             definitions = [ClassDefinition.resolve(element) for element in raw_definition]
-            self.add(definitions)
+            self._add(definitions, upload=upload)
 
-    def add(self, definition):
+    def add(self, definition, upload=True):
+        self._add(definition, upload=upload)
+
+    def _add(self, definition, upload):
         if isinstance(definition, ClassDefinition):
             self.definition_dict[definition.class_name] = definition
-            self.service.upload_class_definition_wrapper(definition.wrap())
+            if upload:
+                self.service.upload_class_definition_wrapper(definition.wrap())
         elif isinstance(definition, ClassDefinitionWrapper):
             self.definition_dict[definition.class_name] = definition.unpack()
-            self.service.upload_class_definition_wrapper(definition)
+            if upload:
+                self.service.upload_class_definition_wrapper(definition)
         elif isinstance(definition, list):
             for each_def in definition:
-                self.add(each_def)
+                self._add(each_def, upload=upload)
         elif not definition:
             return
         else:
@@ -221,11 +226,13 @@ class ClassManager:
             self.get(name)
         return self.classes
 
-    def get(self, name):
+    def get(self, name, ex=False):
         if name in self.classes:
             return self.classes[name]
         if name not in self.definition_dict:
-            raise Exception(f"{name} does not exist in this class manager")
+            if ex:
+                raise Exception(f"{name} does not exist in this class manager")
+            return None
         definition = self.definition_dict[name]
         parent_classes = tuple(self.get(name) for name in definition.parent_classes)
         class_attributes = {

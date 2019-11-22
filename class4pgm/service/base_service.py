@@ -26,7 +26,6 @@ class BaseService:
         self._class_manager = val
 
     def model_to_node(self, instance: NodeModel, auto_add=False):
-
         node = Node(alias=instance.get_alias(), labels=instance.get_labels(),
                     properties=instance.get_properties(), _id=instance.get_id())
         self.instance_to_node[instance] = node
@@ -55,15 +54,18 @@ class BaseService:
         return node_models, edge_models
 
     def node_to_model(self, node: Node):
-        if len(node.labels) == 0 or node.labels[0] not in self._class_manager.classes:
+        if not isinstance(node.labels, list) or len(node.labels) == 0:
             return None
-        model_class = self._class_manager.classes[node.labels[0]]
+        model_class = self._class_manager.get(node.labels[0])
+        if not model_class:
+            return None
         instance = model_class(_id=node.id, _alias=node.alias, **node.properties)
         self.node_to_instance[node] = instance
         return instance
 
-    def edge_to_model(self, edge):
-        if edge.relationship not in self._class_manager.classes:
+    def edge_to_model(self, edge: Edge):
+        model_class = self._class_manager.get(edge.relationship)
+        if not model_class:
             return None
 
         if edge.in_node in self.node_to_instance:
@@ -80,11 +82,10 @@ class BaseService:
 
     def upload_class_definition_wrapper(self, wrapper):
         if isinstance(wrapper, class4pgm.ClassDefinitionWrapper) and self.graph:
-            wrapper = self.model_to_node(wrapper)
-            self.graph.add_class_definition(wrapper)
+            node = self.model_to_node(wrapper)
+            self.graph.add_class_definition(node)
 
     def fetch_class_definition_wrappers(self):
         if self.graph:
             nodes = self.graph.class_defintions.values()
-            wrappers = [self.node_to_model(node) for node in nodes]
-            return wrappers
+            return [self.node_to_model(node) for node in nodes]

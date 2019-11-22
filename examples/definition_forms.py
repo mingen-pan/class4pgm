@@ -3,8 +3,8 @@ from class4pgm.field import String, List, Int, Bool
 
 
 class Person(NodeModel):
-    species = "animal"
-    name = String(unique=True)
+    species = "human"
+    name = String()
     age = Int()
 
 
@@ -16,8 +16,8 @@ class Teacher(Person):
     subject = String()
 
 
-class IntlStudent(Student, Teacher):
-    country = String(nullable=False)
+class IntlStudent(Student):
+    country = String()
 
 
 class Teach(EdgeModel):

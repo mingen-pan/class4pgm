@@ -1,0 +1,83 @@
+from redisgraph import Node, Graph, Edge
+
+import class4pgm
+from class4pgm import NodeModel, EdgeModel
+from class4pgm.service.base_service import BaseService
+
+
+class RedisGraphService(BaseService):
+
+    def __init__(self, redis_graph: Graph, class_manager=None):
+        self.redis_graph = redis_graph
+        super().__init__(class_manager=class_manager)
+
+    def model_to_node(self, instance: NodeModel, auto_add=False):
+        node = Node(alias=instance.get_alias(), label=instance.get_labels()[0],
+                    properties=instance.get_properties(), node_id=instance.get_id())
+        self.instance_to_node[instance] = node
+        if auto_add and self.redis_graph:
+            self.redis_graph.add_node(node)
+        return node
+
+    def model_to_edge(self, instance: EdgeModel, auto_add=False):
+        in_node = self.instance_to_node[instance.get_in_node()]
+        out_node = self.instance_to_node[instance.get_out_node()]
+        edge = Edge(in_node, instance.get_relationship(), out_node, properties=instance.get_properties())
+        if auto_add and self.redis_graph:
+            self.redis_graph.add_edge(edge)
+        return edge
+
+    def graph_to_models(self):
+        node_models = {}
+        edge_models = {}
+        for alias, node in self.redis_graph.nodes.items():
+            node_models[alias] = self.node_to_model(node)
+
+        for alias, edge in self.redis_graph.edges.items():
+            edge_models[alias] = self.edge_to_model(edge)
+
+        return node_models, edge_models
+
+    def node_to_model(self, node: Node):
+        if not node.label:
+            return None
+        model_class = self._class_manager.get(node.label)
+        if not model_class:
+            return None
+        instance = model_class(_id=node.id, _alias=node.alias, **node.properties)
+        self.node_to_instance[id(node)] = instance
+        return instance
+
+    def edge_to_model(self, edge: Edge):
+        model_class = self._class_manager.get(edge.relation)
+        if not model_class:
+            return None
+
+        if id(edge.src_node) in self.node_to_instance:
+            in_node = self.node_to_instance[id(edge.src_node)]
+        else:
+            in_node = edge.src_node
+        if id(edge.dest_node) in self.node_to_instance:
+            out_node = self.node_to_instance[id(edge.dest_node)]
+        else:
+            out_node = edge.dest_node
+
+        return model_class(in_node=in_node, out_node=out_node, **edge.properties)
+
+    def upload_class_definition_wrapper(self, wrapper):
+        if isinstance(wrapper, class4pgm.ClassDefinitionWrapper) and self.redis_graph:
+            wrapper.instance_properties = wrapper.instance_properties.replace('"', '\\"')
+            wrapper.class_attributes = wrapper.class_attributes.replace('"', '\\"')
+            node = self.model_to_node(wrapper)
+            self.redis_graph.add_node(node)
+            self.redis_graph.flush()
+
+    def fetch_class_definition_wrappers(self):
+        if not self.redis_graph:
+            return None
+        q_str = """Match (p:ClassDefinitionWrapper) return p"""
+        results = self.redis_graph.query(q_str)
+        if len(results.result_set) == 0:
+            return []
+        nodes = [row[0] for row in results.result_set]
+        return [self.node_to_model(node) for node in nodes]
