@@ -14,14 +14,14 @@ class RedisGraphService(BaseService):
     def model_to_node(self, instance: NodeModel, auto_add=False):
         node = Node(alias=instance.get_alias(), label=instance.get_labels()[0],
                     properties=instance.get_properties(), node_id=instance.get_id())
-        self.instance_to_node[instance] = node
+        self.model_to_node_dict[instance] = node
         if auto_add and self.redis_graph:
             self.redis_graph.add_node(node)
         return node
 
     def model_to_edge(self, instance: EdgeModel, auto_add=False):
-        in_node = self.instance_to_node[instance.get_in_node()]
-        out_node = self.instance_to_node[instance.get_out_node()]
+        in_node = self.model_to_node_dict[instance.get_in_node()]
+        out_node = self.model_to_node_dict[instance.get_out_node()]
         edge = Edge(in_node, instance.get_relationship(), out_node, properties=instance.get_properties())
         if auto_add and self.redis_graph:
             self.redis_graph.add_edge(edge)
@@ -45,7 +45,7 @@ class RedisGraphService(BaseService):
         if not model_class:
             return None
         instance = model_class(_id=node.id, _alias=node.alias, **node.properties)
-        self.node_to_instance[id(node)] = instance
+        self.node_to_model_dict[id(node)] = instance
         return instance
 
     def edge_to_model(self, edge: Edge):
@@ -53,12 +53,12 @@ class RedisGraphService(BaseService):
         if not model_class:
             return None
 
-        if id(edge.src_node) in self.node_to_instance:
-            in_node = self.node_to_instance[id(edge.src_node)]
+        if id(edge.src_node) in self.node_to_model_dict:
+            in_node = self.node_to_model_dict[id(edge.src_node)]
         else:
             in_node = edge.src_node
-        if id(edge.dest_node) in self.node_to_instance:
-            out_node = self.node_to_instance[id(edge.dest_node)]
+        if id(edge.dest_node) in self.node_to_model_dict:
+            out_node = self.node_to_model_dict[id(edge.dest_node)]
         else:
             out_node = edge.dest_node
 

@@ -79,7 +79,7 @@ class Graph(object):
         self.aliases = set()
         self.nodes = {}
         self.edges = {}
-        self.class_defintions = {}
+        self.class_definitions = {}
 
     def add_node(self, node: Node):
         while node.alias is None:
@@ -103,8 +103,8 @@ class Graph(object):
         self.edges[edge.alias] = edge
 
     def add_class_definition(self, definition: Node):
-        if definition.properties["class_name"] not in self.class_defintions:
-            self.class_defintions[definition.properties["class_name"]] = definition
+        if definition.properties["class_name"] not in self.class_definitions:
+            self.class_definitions[definition.properties["class_name"]] = definition
             return True
         else:
             return False

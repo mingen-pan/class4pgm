@@ -27,7 +27,7 @@ class TestClassManager(unittest.TestCase):
         teach = Teach(in_node=anne, out_node=tom)
 
         print(tom)
-        print(service.model_to_node(tom))
+        print(service.model_to_node_dict(tom))
         print(anne)
         print(teach)
         print("\n\n\n", end='')

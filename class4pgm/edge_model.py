@@ -29,6 +29,8 @@ class EdgeModel(BaseModel):
             res.append('()')
 
         res.append('-[')
+        if self._alias:
+            res.append(self._alias)
         if self._relationship:
             res.append(':' + self._relationship)
         props = self.get_properties()

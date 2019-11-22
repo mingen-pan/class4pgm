@@ -8,12 +8,12 @@ class BaseService:
     def __init__(self, graph: Graph = None, class_manager=None):
         self.graph = graph
         self._class_manager = class_manager
-        self.instance_to_node = {}
-        self.node_to_instance = {}
+        self.model_to_node_dict = {}
+        self.node_to_model_dict = {}
 
     def clear(self):
-        self.instance_to_node = {}
-        self.node_to_instance = {}
+        self.model_to_node_dict = {}
+        self.node_to_model_dict = {}
 
     @property
     def class_manager(self):
@@ -28,14 +28,17 @@ class BaseService:
     def model_to_node(self, instance: NodeModel, auto_add=False):
         node = Node(alias=instance.get_alias(), labels=instance.get_labels(),
                     properties=instance.get_properties(), _id=instance.get_id())
-        self.instance_to_node[instance] = node
+        self.model_to_node_dict[instance] = node
         if auto_add and self.graph:
             self.graph.add_node(node)
         return node
 
     def model_to_edge(self, instance: EdgeModel, auto_add=False):
-        in_node = self.instance_to_node[instance.get_in_node()]
-        out_node = self.instance_to_node[instance.get_out_node()]
+        assert instance.get_in_node() in self.model_to_node_dict and \
+               instance.get_out_node() in self.model_to_node_dict
+
+        in_node = self.model_to_node_dict[instance.get_in_node()]
+        out_node = self.model_to_node_dict[instance.get_out_node()]
         edge = Edge(in_node, instance.get_relationship(), out_node,
                     alias=instance.get_alias(), properties=instance.get_properties(), _id=instance.get_id())
         if auto_add and self.graph:
@@ -60,7 +63,7 @@ class BaseService:
         if not model_class:
             return None
         instance = model_class(_id=node.id, _alias=node.alias, **node.properties)
-        self.node_to_instance[node] = instance
+        self.node_to_model_dict[node] = instance
         return instance
 
     def edge_to_model(self, edge: Edge):
@@ -68,12 +71,12 @@ class BaseService:
         if not model_class:
             return None
 
-        if edge.in_node in self.node_to_instance:
-            in_node = self.node_to_instance[edge.in_node]
+        if edge.in_node in self.node_to_model_dict:
+            in_node = self.node_to_model_dict[edge.in_node]
         else:
             in_node = edge.in_node
-        if edge.out_node in self.node_to_instance:
-            out_node = self.node_to_instance[edge.out_node]
+        if edge.out_node in self.node_to_model_dict:
+            out_node = self.node_to_model_dict[edge.out_node]
         else:
             out_node = edge.out_node
 
@@ -88,6 +91,6 @@ class BaseService:
 
     def fetch_class_definition_wrappers(self):
         if self.graph:
-            nodes = self.graph.class_defintions.values()
+            nodes = self.graph.class_definitions.values()
             return [self.node_to_model(node) for node in nodes]
         return []

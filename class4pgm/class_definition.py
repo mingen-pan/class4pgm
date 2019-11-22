@@ -188,6 +188,7 @@ class ClassManager:
         service.class_manager = self
         self.service = service
         self.fetch_class_definitions()
+        self.build()
 
     def fetch_class_definitions(self):
         wrappers = self.service.fetch_class_definition_wrappers()
@@ -233,7 +234,6 @@ class ClassManager:
             elif isinstance(definition, ClassDefinitionWrapper):
                 res[i] = definition.unpack()
         return res
-
 
     def build(self):
         for name in self.definition_dict.keys():
