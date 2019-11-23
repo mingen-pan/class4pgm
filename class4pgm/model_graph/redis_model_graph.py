@@ -50,4 +50,4 @@ class RedisModelGraph(Graph):
         return self.class_manager.get(class_name)
 
     def insert_raw_definition(self, raw_definition, upload=True):
-        return self.class_manager.insert_raw_definition(raw_definition, upload=upload)
+        return self.class_manager.insert_defined_class(raw_definition, upload=upload)

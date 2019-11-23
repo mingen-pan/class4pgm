@@ -23,4 +23,4 @@ class BaseModelGraph(Graph):
         return self.class_manager.get(class_name)
 
     def insert_raw_definition(self, raw_definitions, upload=True):
-        return self.class_manager.insert_raw_definition(raw_definitions, upload=upload)
+        return self.class_manager.insert_defined_class(raw_definitions, upload=upload)

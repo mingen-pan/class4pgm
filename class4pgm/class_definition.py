@@ -5,55 +5,24 @@ from class4pgm import NodeModel, EdgeModel
 from class4pgm.field import Field
 
 
-def init_factory(instance_properties, parent_classes):
-    """
-    This is a factory function to generate __init__ of a dynamic class, based on the given
-    instance_properties and parent_classes.
-    instance_properties defines the field name of instance variables.
-
-    For example, Given a Dynamic Class named `Student`
-    `parent_classes = ["Person", "Learner"]`
-    It will make the output __init__ to call the __init__ of its parent classes, which are `Person`
-    and `Learner` in this example.
-
-    `instance_properties = ["name", "age"]`
-    the output __init__ will create name and age variables for the instances of a class.
-    One can assign these values like
-    `a = Student(name='Tom', age=26)`
-
-    :param instance_properties: Set[String]
-    :param parent_classes: List[String]
-    :return: __init__ of a dynamic class
-    """
-
-    def init(self, **kwargs):
-        for name, field in instance_properties.items():
-            value = kwargs.pop(name, None)
-            self.__dict__[name] = value
-        for parent_class in parent_classes:
-            parent_class.__init__(self, **kwargs)
-
-    return init
-
-
 class ClassDefinition:
     primitive_types = {int, float, str, bool}
     collection_types = {list, set, dict}
 
-    def __init__(self, class_name, parent_classes, class_attributes, instance_properties):
+    def __init__(self, class_name, parent_classes, attributes):
         self.class_name = class_name
         self.parent_classes = parent_classes
-        self.class_attributes = class_attributes
-        self.instance_properties = instance_properties
+        self.attributes = attributes
 
     def wrap(self):
-        class_attributes = json.dumps(self.class_attributes)
-        instance_properties = {
-            key: Field.encode(value) for key, value in self.instance_properties.items()
-        }
-        instance_properties = json.dumps(instance_properties)
-        return ClassDefinitionWrapper(self.class_name, self.parent_classes,
-                                      class_attributes, instance_properties)
+        attributes = {}
+        for key, value in self.attributes.items():
+            if isinstance(value, Field):
+                attributes[key] = Field.encode(value)
+            else:
+                attributes[key] = value
+
+        return ClassDefinitionWrapper(self.class_name, self.parent_classes, json.dumps(attributes))
 
     @classmethod
     def resolve(cls, def_form):
@@ -63,17 +32,13 @@ class ClassDefinition:
         for parent in def_form.__bases__:
             parent_classes.append(parent.__name__)
 
-        class_attributes = {}
-        instance_properties = {}
+        attributes = {}
         for key, value in vars(def_form).items():
             if len(key) > 2 and key[:2] == "__":
                 continue
-            if type(value) in cls.primitive_types:
-                class_attributes[key] = value
-            elif isinstance(value, Field):
-                instance_properties[key] = value
-        return cls(class_name=class_name, parent_classes=parent_classes, class_attributes=class_attributes,
-                   instance_properties=instance_properties)
+            if isinstance(value, Field) or type(value) in cls.primitive_types:
+                attributes[key] = value
+        return cls(class_name=class_name, parent_classes=parent_classes, attributes=attributes)
 
 
 class ClassDefinitionWrapper(NodeModel):
@@ -93,11 +58,10 @@ class ClassDefinitionWrapper(NodeModel):
 
     """
 
-    def __init__(self, class_name, parent_classes, class_attributes, instance_properties, **kwargs):
+    def __init__(self, class_name, parent_classes, attributes, **kwargs):
         self.class_name = class_name
         self.parent_classes = parent_classes
-        self.class_attributes = class_attributes
-        self.instance_properties = instance_properties
+        self.attributes = attributes
         self._attribute_check()
         super().__init__(**kwargs)
 
@@ -107,48 +71,25 @@ class ClassDefinitionWrapper(NodeModel):
         if not isinstance(self.parent_classes, list):
             self.parent_classes = []
 
-        if not self.class_attributes:
-            self.class_attributes = "{}"
-        elif isinstance(self.class_attributes, str):
+        if not self.attributes:
+            self.attributes = "{}"
+        elif isinstance(self.attributes, str):
             try:
-                json.loads(self.class_attributes)
+                json.loads(self.attributes)
             except ValueError:
-                raise ValueError("class_attributes is not a valid JSON")
-        elif isinstance(self.class_attributes, dict):
-            self.class_attributes = json.dumps(self.class_attributes)
+                raise ValueError("attributes is not a valid JSON")
+        elif isinstance(self.attributes, dict):
+            self.attributes = json.dumps(self.attributes)
         else:
-            raise ValueError("class_attributes should be JSON str or dict")
-
-        if not self.instance_properties:
-            self.instance_properties = "{}"
-        elif isinstance(self.instance_properties, str):
-            try:
-                instance_properties = json.loads(self.instance_properties)
-                for key, value in instance_properties.items():
-                    Field.decode(value)
-            except ValueError:
-                raise ValueError("instance_properties is not a valid JSON")
-        elif isinstance(self.instance_properties, dict):
-            instance_properties = {}
-            for name, field in self.instance_properties.items():
-                assert isinstance(field, Field), "instance properties should be Field class only"
-                instance_properties[name] = field.encode()
-            self.instance_properties = json.dumps(instance_properties)
+            raise ValueError("attributes should be JSON str or dict")
 
     def unpack(self):
         try:
-            class_attributes = json.loads(self.class_attributes)
+            attributes = json.loads(self.attributes)
         except ValueError:
-            raise ValueError("class_attributes is not a valid JSON")
+            raise ValueError("attributes is not a valid JSON")
 
-        try:
-            instance_properties = {
-                key: Field.decode(value) for key, value in json.loads(self.instance_properties).items()
-            }
-        except ValueError:
-            raise ValueError("instance_properties is not a valid JSON")
-
-        return ClassDefinition(self.class_name, self.parent_classes, class_attributes, instance_properties)
+        return ClassDefinition(self.class_name, self.parent_classes, attributes)
 
 
 class ClassManager:
@@ -164,17 +105,17 @@ class ClassManager:
 
     Methods
     -------
-    __init__(self, class_dto_list)
-        take a list of dynamic class dtos to build a instance
+    __init__(self, service, class_definitions=None)
+        construct a class_manager with a service that supports different graph databases.
 
-    add(self, dto)
-        Add individual dto
+    insert(self, definitions)
+        insert one or a list of ClassDefinition instances
 
     build(self)
-        build all the dynamic classes in this collection
+        build all the classes in this collection
 
     get(self, name)
-        get the dynamic class with `name`. It will built this class and its parent classes automatically.
+        get the class with `name`. It will build this class and its parent classes automatically.
     """
 
     def __init__(self, service: base_service.BaseService, class_definitions=None):
@@ -194,12 +135,12 @@ class ClassManager:
         wrappers = self.service.fetch_class_definition_wrappers()
         self._insert(wrappers, upload=False)
 
-    def insert_raw_definition(self, raw_definition, upload=True):
-        if isinstance(raw_definition, type):
-            definition = ClassDefinition.resolve(raw_definition)
+    def insert_defined_class(self, defined_class, upload=True):
+        if isinstance(defined_class, type):
+            definition = ClassDefinition.resolve(defined_class)
             return self._insert([definition], upload=upload)[0]
-        elif isinstance(raw_definition, list):
-            definitions = [ClassDefinition.resolve(element) for element in raw_definition]
+        elif isinstance(defined_class, list):
+            definitions = [ClassDefinition.resolve(element) for element in defined_class]
             return self._insert(definitions, upload=upload)
 
     def insert(self, definition, upload=True):
@@ -249,9 +190,5 @@ class ClassManager:
             return None
         definition = self.definition_dict[name]
         parent_classes = tuple(self.get(name) for name in definition.parent_classes)
-        class_attributes = {
-            **definition.class_attributes,
-            "__init__": init_factory(definition.instance_properties, parent_classes)
-        }
-        self.classes[name] = type(name, parent_classes, class_attributes)
+        self.classes[name] = type(name, parent_classes, definition.attributes)
         return self.classes[name]

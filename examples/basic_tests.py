@@ -15,29 +15,19 @@ class TestClassManager(unittest.TestCase):
         self.r = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
     def test_basic_a(self):
-        service = BaseService(base_element.Graph("test_a"))
-        manager = ClassManager(service)
-        manager.insert_raw_definition(definition_forms.test_a_definition_forms)
-        InstStudent = manager.get('IntlStudent')
-        Teacher = manager.get('Teacher')
-        Teach = manager.get('Teach')
-
-        tom = InstStudent(name="Tom", age=26, school='Foo School', country="No Country")
-        anne = Teacher(name="Anne", age=35, subject="Sleep Science")
-        teach = Teach(in_node=anne, out_node=tom)
-
+        tom = definition_forms.IntlStudent(name="Tom", age=26, school='Foo School', country="No Country")
+        anne = definition_forms.Teacher(name="Anne", age=35, subject="Sleep Science")
+        teach = definition_forms.Teach(in_node=anne, out_node=tom)
         print(tom)
-        print(service.model_to_node_dict(tom))
         print(anne)
         print(teach)
-        print("\n\n\n", end='')
         self.assertTrue(True)
 
     def test_basic_b(self):
         graph = base_element.Graph("test")
         service = BaseService(graph=graph)
         old_manager = ClassManager(service)
-        old_manager.insert_raw_definition(definition_forms.test_b_definition_forms)
+        old_manager.insert_defined_class(definition_forms.test_b_definition_forms)
 
         manager = ClassManager(service)
 
@@ -71,7 +61,7 @@ class TestClassManager(unittest.TestCase):
         redis_graph = redisgraph.Graph('school', self.r)
         service = RedisGraphService(redis_graph=redis_graph)
         old_manager = ClassManager(service)
-        old_manager.insert_raw_definition(definition_forms.test_a_definition_forms)
+        old_manager.insert_defined_class(definition_forms.test_a_definition_forms)
 
         # get all the classes
         IntlStudent = old_manager.get("IntlStudent")
@@ -110,9 +100,9 @@ class TestClassManager(unittest.TestCase):
         redis_graph = redisgraph.Graph('duplicate_upload_class', self.r)
         service = RedisGraphService(redis_graph=redis_graph)
         manager = ClassManager(service)
-        manager.insert_raw_definition(definition_forms.test_a_definition_forms)
-        manager.insert_raw_definition(definition_forms.test_a_definition_forms)
-        manager.insert_raw_definition(definition_forms.test_a_definition_forms)
+        manager.insert_defined_class(definition_forms.test_a_definition_forms)
+        manager.insert_defined_class(definition_forms.test_a_definition_forms)
+        manager.insert_defined_class(definition_forms.test_a_definition_forms)
         result = redis_graph.query("""Match (a:ClassDefinitionWrapper) return count(a) as cnt""")
         self.assertEqual(result.result_set[0][0], len(definition_forms.test_a_definition_forms))
         redis_graph.delete()
