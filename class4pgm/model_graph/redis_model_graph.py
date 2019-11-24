@@ -23,12 +23,14 @@ class RedisModelGraph(Graph):
     def match_node(self, node_model: NodeModel):
         if not node_model.get_alias():
             node_model._alias = 'a'
-        return self.model_query(f"""Match {str(node_model)} return {node_model.get_alias()}""")
+        result = self.model_query(f"""Match {str(node_model)} return {node_model.get_alias()}""")
+        return [row[0] for row in result.result_set]
 
     def match_edge(self, edge_model: EdgeModel):
         if not edge_model.get_alias():
             edge_model._alias = 'a'
-        return self.model_query(f"""Match {str(edge_model)} return {edge_model.get_alias()}""")
+        result = self.model_query(f"""Match {str(edge_model)} return {edge_model.get_alias()}""")
+        return [row[0] for row in result.result_set]
 
     def model_query(self, q, params=None):
         result = self.query(q, params)
@@ -49,5 +51,5 @@ class RedisModelGraph(Graph):
     def get_class(self, class_name):
         return self.class_manager.get(class_name)
 
-    def insert_raw_definition(self, raw_definition, upload=True):
-        return self.class_manager.insert_defined_class(raw_definition, upload=upload)
+    def insert_defined_class(self, defined_class, upload=True):
+        return self.class_manager.insert_defined_class(defined_class, upload=upload)

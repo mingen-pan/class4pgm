@@ -66,7 +66,8 @@ class RedisGraphService(BaseService):
 
     def upload_class_definition_wrapper(self, wrapper):
         if isinstance(wrapper, class4pgm.ClassDefinitionWrapper) and self.redis_graph:
-            wrapper.attributes = wrapper.attributes.replace('"', '\\"')
+            wrapper.class_attributes = wrapper.class_attributes.replace('"', '\\"')
+            wrapper.instance_properties = wrapper.instance_properties.replace('"', '\\"')
             node = self.model_to_node(wrapper)
 
             # Check if a class definition has already existed!

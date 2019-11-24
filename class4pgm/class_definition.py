@@ -9,20 +9,20 @@ class ClassDefinition:
     primitive_types = {int, float, str, bool}
     collection_types = {list, set, dict}
 
-    def __init__(self, class_name, parent_classes, attributes):
+    def __init__(self, class_name, parent_classes, class_attributes, instance_properties):
         self.class_name = class_name
         self.parent_classes = parent_classes
-        self.attributes = attributes
+        self.class_attributes = class_attributes
+        self.instance_properties = instance_properties
 
     def wrap(self):
-        attributes = {}
-        for key, value in self.attributes.items():
-            if isinstance(value, Field):
-                attributes[key] = Field.encode(value)
-            else:
-                attributes[key] = value
-
-        return ClassDefinitionWrapper(self.class_name, self.parent_classes, json.dumps(attributes))
+        class_attributes = json.dumps(self.class_attributes)
+        instance_properties = {
+            key: Field.encode(value) for key, value in self.instance_properties.items()
+        }
+        instance_properties = json.dumps(instance_properties)
+        return ClassDefinitionWrapper(self.class_name, self.parent_classes,
+                                      class_attributes, instance_properties)
 
     @classmethod
     def resolve(cls, def_form):
@@ -32,13 +32,17 @@ class ClassDefinition:
         for parent in def_form.__bases__:
             parent_classes.append(parent.__name__)
 
-        attributes = {}
+        class_attributes = {}
+        instance_properties = {}
         for key, value in vars(def_form).items():
             if len(key) > 2 and key[:2] == "__":
                 continue
-            if isinstance(value, Field) or type(value) in cls.primitive_types:
-                attributes[key] = value
-        return cls(class_name=class_name, parent_classes=parent_classes, attributes=attributes)
+            if type(value) in cls.primitive_types:
+                class_attributes[key] = value
+            elif isinstance(value, Field):
+                instance_properties[key] = value
+        return cls(class_name=class_name, parent_classes=parent_classes, class_attributes=class_attributes,
+                   instance_properties=instance_properties)
 
 
 class ClassDefinitionWrapper(NodeModel):
@@ -58,10 +62,11 @@ class ClassDefinitionWrapper(NodeModel):
 
     """
 
-    def __init__(self, class_name, parent_classes, attributes, **kwargs):
+    def __init__(self, class_name, parent_classes, class_attributes, instance_properties, **kwargs):
         self.class_name = class_name
         self.parent_classes = parent_classes
-        self.attributes = attributes
+        self.class_attributes = class_attributes
+        self.instance_properties = instance_properties
         self._attribute_check()
         super().__init__(**kwargs)
 
@@ -71,25 +76,48 @@ class ClassDefinitionWrapper(NodeModel):
         if not isinstance(self.parent_classes, list):
             self.parent_classes = []
 
-        if not self.attributes:
-            self.attributes = "{}"
-        elif isinstance(self.attributes, str):
+        if not self.class_attributes:
+            self.class_attributes = "{}"
+        elif isinstance(self.class_attributes, str):
             try:
-                json.loads(self.attributes)
+                json.loads(self.class_attributes)
             except ValueError:
-                raise ValueError("attributes is not a valid JSON")
-        elif isinstance(self.attributes, dict):
-            self.attributes = json.dumps(self.attributes)
+                raise ValueError("class_attributes is not a valid JSON")
+        elif isinstance(self.class_attributes, dict):
+            self.class_attributes = json.dumps(self.class_attributes)
         else:
-            raise ValueError("attributes should be JSON str or dict")
+            raise ValueError("class_attributes should be JSON str or dict")
+
+        if not self.instance_properties:
+            self.instance_properties = "{}"
+        elif isinstance(self.instance_properties, str):
+            try:
+                instance_properties = json.loads(self.instance_properties)
+                for key, value in instance_properties.items():
+                    Field.decode(value)
+            except ValueError:
+                raise ValueError("instance_properties is not a valid JSON")
+        elif isinstance(self.instance_properties, dict):
+            instance_properties = {}
+            for name, field in self.instance_properties.items():
+                assert isinstance(field, Field), "instance properties should be Field class only"
+                instance_properties[name] = field.encode()
+            self.instance_properties = json.dumps(instance_properties)
 
     def unpack(self):
         try:
-            attributes = json.loads(self.attributes)
+            class_attributes = json.loads(self.class_attributes)
         except ValueError:
-            raise ValueError("attributes is not a valid JSON")
+            raise ValueError("class_attributes is not a valid JSON")
 
-        return ClassDefinition(self.class_name, self.parent_classes, attributes)
+        try:
+            instance_properties = {
+                key: Field.decode(value) for key, value in json.loads(self.instance_properties).items()
+            }
+        except ValueError:
+            raise ValueError("instance_properties is not a valid JSON")
+
+        return ClassDefinition(self.class_name, self.parent_classes, class_attributes, instance_properties)
 
 
 class ClassManager:
@@ -190,5 +218,9 @@ class ClassManager:
             return None
         definition = self.definition_dict[name]
         parent_classes = tuple(self.get(name) for name in definition.parent_classes)
-        self.classes[name] = type(name, parent_classes, definition.attributes)
+        attributes = {
+            **definition.class_attributes,
+            **definition.instance_properties
+        }
+        self.classes[name] = type(name, parent_classes, attributes)
         return self.classes[name]

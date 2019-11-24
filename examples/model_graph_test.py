@@ -12,7 +12,7 @@ class ModelGraphTest(unittest.TestCase):
 
     def test_redis_model_graph(self):
         graph = RedisModelGraph("test_redis_model_graph", self.r)
-        graph.insert_raw_definition(test_a_definition_forms)
+        graph.insert_defined_class(test_a_definition_forms)
         IntlStudent = graph.get_class("IntlStudent")
         Teacher = graph.get_class("Teacher")
         Teach = graph.get_class("Teach")
@@ -33,9 +33,9 @@ class ModelGraphTest(unittest.TestCase):
         for result in results.result_set:
             print(result[0])
 
-        results = graph.match_edge(Teach(in_node=None, out_node=None))
-        for result in results.result_set:
-            print(result[0])
+        edges = graph.match_edge(Teach(in_node=None, out_node=None))
+        for edge in edges:
+            print(edge)
 
         graph.delete()
 
