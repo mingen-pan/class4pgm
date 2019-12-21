@@ -122,7 +122,7 @@ class ClassDefinitionWrapper(NodeModel):
 
 class ClassManager:
     """
-    A class to convert DynamicClassDTO instances to dynamic classes. It will resolve class inheritance
+    A class to resolve and persist user-defined models. It will resolve class inheritance
     based on Depth-first Search. It uses lazy initialization to build dynamic classes. They are built
     only when you call `get` or `build`.
 
@@ -154,6 +154,8 @@ class ClassManager:
             "ClassDefinitionWrapper": ClassDefinitionWrapper
         }
         self.insert(class_definitions)
+        if service is None:
+            service = base_service.BaseService()
         service.class_manager = self
         self.service = service
         self.fetch_class_definitions()
@@ -183,7 +185,7 @@ class ClassManager:
         definitions = self._type_check_before_insert(definitions)
         results = [None] * len(definitions)
         for i, definition in enumerate(definitions):
-            if not definition:
+            if definition is None:
                 results[i] = False
                 continue
             if upload:
@@ -203,6 +205,18 @@ class ClassManager:
             elif isinstance(definition, ClassDefinitionWrapper):
                 res[i] = definition.unpack()
         return res
+
+    def delete(self, class_name, sync=True):
+        if isinstance(class_name, list):
+            self._delete(class_name, sync)
+        else:
+            self._delete([class_name], sync)
+
+    def _delete(self, class_names: list, sync: bool):
+        for class_name in class_names:
+            self.classes.pop(class_name, None)
+            if sync:
+                self.service.delete_class_definition_wrapper(class_name)
 
     def build(self):
         for name in self.definition_dict.keys():

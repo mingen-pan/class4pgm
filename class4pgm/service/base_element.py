@@ -108,3 +108,7 @@ class Graph(object):
             return True
         else:
             return False
+
+    def delete_class_definition(self, class_name: str):
+        self.class_definitions.pop(class_name, None)
+        return True

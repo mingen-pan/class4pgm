@@ -22,5 +22,8 @@ class BaseModelGraph(Graph):
     def get_class(self, class_name):
         return self.class_manager.get(class_name)
 
-    def insert_raw_definition(self, raw_definitions, upload=True):
+    def insert_defined_class(self, raw_definitions, upload=True):
         return self.class_manager.insert_defined_class(raw_definitions, upload=upload)
+
+    def delete_defined_class(self, class_names, sync=True):
+        return self.class_manager.delete(class_names, sync=sync)

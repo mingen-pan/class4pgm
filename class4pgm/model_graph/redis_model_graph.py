@@ -53,3 +53,6 @@ class RedisModelGraph(Graph):
 
     def insert_defined_class(self, defined_class, upload=True):
         return self.class_manager.insert_defined_class(defined_class, upload=upload)
+
+    def delete_defined_class(self, class_name, sync=True):
+        return self.class_manager.delete(class_name, sync=sync)

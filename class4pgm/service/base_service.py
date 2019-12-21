@@ -89,6 +89,9 @@ class BaseService:
             return self.graph.add_class_definition(node)
         return False
 
+    def delete_class_definition_wrapper(self, class_name):
+        return self.graph.delete_class_definition(class_name)
+
     def fetch_class_definition_wrappers(self):
         if self.graph:
             nodes = self.graph.class_definitions.values()

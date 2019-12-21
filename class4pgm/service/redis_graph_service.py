@@ -82,6 +82,10 @@ class RedisGraphService(BaseService):
             self.redis_graph.flush()
             return True
 
+    def delete_class_definition_wrapper(self, class_name):
+        result = self.redis_graph.query(f"Match (a:ClassDefinitionWrapper {{class_name: '{class_name}'}}) delete a")
+        return result.nodes_deleted > 0
+
     def fetch_class_definition_wrappers(self):
         if not self.redis_graph:
             return []

@@ -1,5 +1,3 @@
-import json
-
 datatype_dict = {
     "int": int,
     "float": float,
@@ -56,6 +54,8 @@ class Field(object):
     def raise_exception(self, msg: str):
         if self.exception:
             raise ValueError(msg)
+        else:
+            raise RuntimeWarning(msg)
 
 
 def Int(nullable: bool = True, unique: bool = False, exception: bool = True):
