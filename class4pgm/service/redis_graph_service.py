@@ -7,24 +7,23 @@ from class4pgm.service.base_service import BaseService
 
 class RedisGraphService(BaseService):
 
-    def __init__(self, redis_graph: Graph, class_manager=None):
-        self.redis_graph = redis_graph
-        super().__init__(class_manager=class_manager)
+    def __init__(self, graph: Graph, class_manager=None):
+        super().__init__(graph=graph, class_manager=class_manager)
 
     def model_to_node(self, instance: NodeModel, auto_add=False):
         node = Node(alias=instance.get_alias(), label=instance.get_labels()[0],
                     properties=instance.get_properties(), node_id=instance.get_id())
         self.model_to_node_dict[instance] = node
-        if auto_add and self.redis_graph:
-            self.redis_graph.add_node(node)
+        if auto_add and self.graph:
+            self.graph.add_node(node)
         return node
 
     def model_to_edge(self, instance: EdgeModel, auto_add=False):
         in_node = self.model_to_node_dict[instance.get_in_node()]
         out_node = self.model_to_node_dict[instance.get_out_node()]
         edge = Edge(in_node, instance.get_relationship(), out_node, properties=instance.get_properties())
-        if auto_add and self.redis_graph:
-            self.redis_graph.add_edge(edge)
+        if auto_add and self.graph:
+            self.graph.add_edge(edge)
         return edge
 
     def graph_to_models(self):
@@ -57,32 +56,32 @@ class RedisGraphService(BaseService):
         return model_class(in_node=in_node, out_node=out_node, **edge.properties)
 
     def upload_class_definition_wrapper(self, wrapper):
-        if isinstance(wrapper, class4pgm.ClassDefinitionWrapper) and self.redis_graph:
+        if isinstance(wrapper, class4pgm.ClassDefinitionWrapper) and self.graph:
             wrapper.class_attributes = wrapper.class_attributes.replace('"', '\\"')
             wrapper.instance_properties = wrapper.instance_properties.replace('"', '\\"')
             node = self.model_to_node(wrapper)
 
             # Check if a class definition has already existed!
             node.alias = "a"
-            result = self.redis_graph.query(f"Match ({node.alias}:ClassDefinitionWrapper "
+            result = self.graph.query(f"Match ({node.alias}:ClassDefinitionWrapper "
                                             f"{{class_name: \"{wrapper.class_name}\"}}) "
                                             f"return count({node.alias}) as cnt")
             if result.result_set and result.result_set[0][0] > 0:
                 return False
 
-            self.redis_graph.add_node(node)
-            self.redis_graph.flush()
+            self.graph.add_node(node)
+            self.graph.flush()
             return True
 
     def delete_class_definition_wrapper(self, class_name):
-        result = self.redis_graph.query(f"Match (a:ClassDefinitionWrapper {{class_name: '{class_name}'}}) delete a")
+        result = self.graph.query(f"Match (a:ClassDefinitionWrapper {{class_name: '{class_name}'}}) delete a")
         return result.nodes_deleted > 0
 
     def fetch_class_definition_wrappers(self):
-        if not self.redis_graph:
+        if not self.graph:
             return []
         q_str = """Match (p:ClassDefinitionWrapper) return p"""
-        results = self.redis_graph.query(q_str)
+        results = self.graph.query(q_str)
         if len(results.result_set) == 0:
             return []
         nodes = [row[0] for row in results.result_set]

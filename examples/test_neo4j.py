@@ -35,8 +35,10 @@ class TestNeo4j(unittest.TestCase):
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
 
-        result = NodeMatcher(self.graph).match("ClassDefinitionWrapper")
-        self.assertEqual(len(result), len(definition_forms.test_a_definition_forms))
+        results = list(NodeMatcher(self.graph).match("ClassDefinitionWrapper"))
+        for result in results:
+            print(result)
+        self.assertEqual(len(results), len(definition_forms.test_a_definition_forms))
         self.graph.delete_all()
 
     def test_delete_class(self):

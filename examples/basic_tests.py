@@ -59,7 +59,7 @@ class TestClassManager(unittest.TestCase):
 
     def test_on_redis_graph(self):
         redis_graph = redisgraph.Graph('school', self.r)
-        service = RedisGraphService(redis_graph=redis_graph)
+        service = RedisGraphService(graph=redis_graph)
         old_manager = ClassManager(service)
         old_manager.insert_defined_class(definition_forms.test_a_definition_forms)
 
@@ -79,7 +79,7 @@ class TestClassManager(unittest.TestCase):
 
         r = redis.Redis(host='localhost', port=6379, decode_responses=True)
         redis_graph = redisgraph.Graph('school', r)
-        service = RedisGraphService(redis_graph=redis_graph)
+        service = RedisGraphService(graph=redis_graph)
         manager = ClassManager(service)
 
         results = redis_graph.query("""Match (p) return p""")
@@ -98,7 +98,7 @@ class TestClassManager(unittest.TestCase):
 
     def test_duplicate_upload_class(self):
         redis_graph = redisgraph.Graph('duplicate_upload_class', self.r)
-        service = RedisGraphService(redis_graph=redis_graph)
+        service = RedisGraphService(graph=redis_graph)
         manager = ClassManager(service)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
@@ -109,7 +109,7 @@ class TestClassManager(unittest.TestCase):
 
     def test_delete_class(self):
         redis_graph = redisgraph.Graph('delete_class', self.r)
-        service = RedisGraphService(redis_graph=redis_graph)
+        service = RedisGraphService(graph=redis_graph)
         manager = ClassManager(service)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
         manager.delete([raw_definition.__name__ for raw_definition in definition_forms.test_a_definition_forms])
