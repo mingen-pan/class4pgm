@@ -1,6 +1,6 @@
 import unittest
 
-from py2neo import Graph, Node, Relationship, NodeMatcher
+from py2neo import Graph, Node, Relationship, NodeMatcher, RelationshipMatcher
 
 from class4pgm import ClassManager
 from class4pgm.service.neo4j_service import Neo4jService
@@ -26,6 +26,40 @@ class TestNeo4j(unittest.TestCase):
         cursor = self.graph.run("Match ()-[a]->() return a")
         for record in cursor:
             print(record)
+        self.graph.delete_all()
+
+    def test_on_neo4j_graph(self):
+        service = Neo4jService(graph=self.graph)
+        old_manager = ClassManager(service)
+        old_manager.insert_defined_class(definition_forms.test_a_definition_forms)
+
+        # get all the classes
+        IntlStudent = old_manager.get("IntlStudent")
+        Teacher = old_manager.get("Teacher")
+        Teach = old_manager.get("Teach")
+
+        john = IntlStudent(name="John", age=23, school="Columbia", country="No country")
+        kate = Teacher(name="Kate", age=18, subject="Computer Science")
+        teach = Teach(in_node=kate, out_node=john)
+
+        old_manager.service.model_to_node(john, auto_add=True)
+        old_manager.service.model_to_node(kate, auto_add=True)
+        old_manager.service.model_to_edge(teach, auto_add=True)
+
+        self.setUp()
+        service = Neo4jService(graph=self.graph)
+        manager = ClassManager(service)
+
+        matcher = NodeMatcher(self.graph).match()
+        models = [service.node_to_model(node) for node in list(matcher)]
+        for model in models:
+            print(model)
+
+        matcher = RelationshipMatcher(self.graph).match()
+        models = [service.edge_to_model(edge) for edge in list(matcher)]
+        for model in models:
+            print(model)
+
         self.graph.delete_all()
 
     def test_duplicate_upload_class(self):

@@ -1,8 +1,9 @@
 import json
 
 import class4pgm.service.base_service as base_service
-from class4pgm import NodeModel, EdgeModel
+from class4pgm.edge_model import EdgeModel
 from class4pgm.field import Field
+from class4pgm.node_model import NodeModel
 
 
 class ClassDefinition:

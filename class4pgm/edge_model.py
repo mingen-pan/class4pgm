@@ -1,5 +1,5 @@
-from class4pgm import NodeModel
 from class4pgm.base_model import BaseModel
+from class4pgm.node_model import NodeModel
 from class4pgm.util import quote_string
 
 

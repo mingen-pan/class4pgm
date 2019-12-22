@@ -1,4 +1,6 @@
-from class4pgm import NodeModel, EdgeModel, ClassManager
+from class4pgm.class_definition import ClassManager
+from class4pgm.edge_model import EdgeModel
+from class4pgm.node_model import NodeModel
 from class4pgm.service.base_element import Graph
 from class4pgm.service.base_service import BaseService
 
