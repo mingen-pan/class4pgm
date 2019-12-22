@@ -28,15 +28,7 @@ class RedisGraphService(BaseService):
         return edge
 
     def graph_to_models(self):
-        node_models = {}
-        edge_models = {}
-        for alias, node in self.redis_graph.nodes.items():
-            node_models[alias] = self.node_to_model(node)
-
-        for alias, edge in self.redis_graph.edges.items():
-            edge_models[alias] = self.edge_to_model(edge)
-
-        return node_models, edge_models
+        pass
 
     def node_to_model(self, node: Node):
         if not node.label:

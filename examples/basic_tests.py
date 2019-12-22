@@ -107,5 +107,15 @@ class TestClassManager(unittest.TestCase):
         self.assertEqual(result.result_set[0][0], len(definition_forms.test_a_definition_forms))
         redis_graph.delete()
 
+    def test_delete_class(self):
+        redis_graph = redisgraph.Graph('delete_class', self.r)
+        service = RedisGraphService(redis_graph=redis_graph)
+        manager = ClassManager(service)
+        manager.insert_defined_class(definition_forms.test_a_definition_forms)
+        manager.delete([raw_definition.__name__ for raw_definition in definition_forms.test_a_definition_forms])
+        result = redis_graph.query("""Match (a:ClassDefinitionWrapper) return count(a) as cnt""")
+        self.assertEqual(result.result_set[0][0], 0)
+        redis_graph.delete()
+
 if __name__ == '__main__':
     unittest.main()

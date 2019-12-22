@@ -5,4 +5,5 @@ from class4pgm.model_graph.base_model_graph import BaseModelGraph
 from class4pgm.model_graph.redis_model_graph import RedisModelGraph
 from class4pgm.node_model import NodeModel
 from class4pgm.service.base_service import BaseService
+from class4pgm.service.neo4j_service import Neo4jService
 from class4pgm.service.redis_graph_service import RedisGraphService

@@ -1,11 +1,11 @@
 import class4pgm
 from class4pgm import NodeModel, EdgeModel
-from class4pgm.service.base_element import Node, Edge, Graph
+from class4pgm.service.base_element import Node, Edge
 
 
 class BaseService:
 
-    def __init__(self, graph: Graph = None, class_manager=None):
+    def __init__(self, graph=None, class_manager=None):
         self.graph = graph
         self._class_manager = class_manager
         self.model_to_node_dict = {}
