@@ -4,6 +4,7 @@ from class4pgm.field import String, List, Int, Bool
 
 class Person(NodeModel):
     species = "human"
+    code = [[1, 2, "a"], {1: "apple", "banana": 123}]
     name = String()
     age = Int()
 
@@ -65,3 +66,12 @@ class Own(EdgeModel):
 
 
 test_b_definition_forms = [BioNode, Neuropil, Circuit, Species, FruitFly, Own]
+
+
+class ExceptionNodeA(NodeModel):
+    a = Int(nullable=False)
+
+
+class ExceptionNodeB(NodeModel):
+    a = Int(nullable=False, exception=False)
+    b = List(exception=False)

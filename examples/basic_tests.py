@@ -67,6 +67,9 @@ class TestClassManager(unittest.TestCase):
         IntlStudent = old_manager.get("IntlStudent")
         Teacher = old_manager.get("Teacher")
         Teach = old_manager.get("Teach")
+        print(Teacher.code)
+        self.assertEqual(Teacher.code[0][2], 'a')
+        self.assertEqual(Teacher.code[1]['banana'], 123)
 
         john = IntlStudent(name="John", age=23, school="Columbia", country="No country")
         kate = Teacher(name="Kate", age=18, subject="Computer Science")
@@ -115,6 +118,32 @@ class TestClassManager(unittest.TestCase):
         manager.delete([raw_definition.__name__ for raw_definition in definition_forms.test_a_definition_forms])
         result = redis_graph.query("""Match (a:ClassDefinitionWrapper) return count(a) as cnt""")
         self.assertEqual(result.result_set[0][0], 0)
+        redis_graph.delete()
+
+    def test_field_exception(self):
+        T = definition_forms.ExceptionNodeA
+        try:
+            T()
+        except ValueError as ex:
+            print(ex.args[0])
+
+        T = definition_forms.ExceptionNodeB
+        T()
+        T(a="abc", b=[123, "abc", [[99, True], []]])
+        T(a="abc", b=[dict()])
+
+    def test_upload_embedded_list_to_redis_graph(self):
+        redis_graph = redisgraph.Graph('embedded_list', self.r)
+        service = RedisGraphService(graph=redis_graph)
+        manager = ClassManager(service)
+        manager.insert_defined_class(definition_forms.ExceptionNodeB)
+        T = manager.get("ExceptionNodeB")
+        a = T(a=100, b=[123, "abc", [[99, True], []]])
+        service.model_to_node(a, auto_add=True)
+        redis_graph.flush()
+        res = redis_graph.query("match (a:ExceptionNodeB) return a")
+        a = res.result_set[0][0]
+        print(a)
         redis_graph.delete()
 
 if __name__ == '__main__':

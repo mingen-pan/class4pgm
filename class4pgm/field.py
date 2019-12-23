@@ -1,3 +1,4 @@
+
 datatype_dict = {
     "int": int,
     "float": float,
@@ -43,19 +44,24 @@ class Field(object):
             if self.nullable:
                 return value
             self.raise_exception("null is not allowed")
-            return
 
         if not isinstance(value, self.datatype):
-            self.raise_exception("datatype does not match")
-            return
+            self.raise_exception(f"datatype does not match. Need {self.datatype}, bug given {type(value)}")
+
+        def check_list_type(value):
+            for unit in value:
+                if type(unit) not in datatype_dict.values():
+                    self.raise_exception(f"{type(unit)} not supported as list element")
+                if isinstance(unit, list):
+                    check_list_type(unit)
+
+        if self.datatype is list:
+            check_list_type(value)
 
         return value
 
     def raise_exception(self, msg: str):
-        if self.exception:
-            raise ValueError(msg)
-        else:
-            raise RuntimeWarning(msg)
+        raise ValueError(msg)
 
 
 def Int(nullable: bool = True, unique: bool = False, exception: bool = True):

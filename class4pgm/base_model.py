@@ -1,4 +1,5 @@
 import re
+import warnings
 
 from class4pgm.field import Field
 
@@ -16,7 +17,12 @@ class BaseModel(object):
         for name, field in vars(clazz).items():
             if isinstance(field, Field):
                 value = kwargs.get(name, None)
-                self.__dict__[name] = value
+                try:
+                    self.__dict__[name] = field.validate(value)
+                except ValueError as ex:
+                    if field.exception:
+                        raise ex
+                    warnings.warn(f" Class [{clazz.__name__}] Field [{name}]:  {ex.args[0]}")
 
     def get_inheritances(self):
         visited = set()

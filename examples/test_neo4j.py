@@ -37,6 +37,9 @@ class TestNeo4j(unittest.TestCase):
         IntlStudent = old_manager.get("IntlStudent")
         Teacher = old_manager.get("Teacher")
         Teach = old_manager.get("Teach")
+        print(Teacher.code)
+        self.assertEqual(Teacher.code[0][2], 'a')
+        self.assertEqual(Teacher.code[1]['banana'], 123)
 
         john = IntlStudent(name="John", age=23, school="Columbia", country="No country")
         kate = Teacher(name="Kate", age=18, subject="Computer Science")

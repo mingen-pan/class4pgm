@@ -8,7 +8,7 @@ from class4pgm.node_model import NodeModel
 
 class ClassDefinition:
     primitive_types = {int, float, str, bool}
-    collection_types = {list, set, dict}
+    collection_types = {list, tuple, dict}
 
     def __init__(self, class_name, parent_classes, class_attributes, instance_properties):
         self.class_name = class_name
@@ -40,10 +40,41 @@ class ClassDefinition:
                 continue
             if type(value) in cls.primitive_types:
                 class_attributes[key] = value
+            elif type(value) in cls.collection_types:
+                if cls.check_collection_type_value(value):
+                    class_attributes[key] = value
             elif isinstance(value, Field):
                 instance_properties[key] = value
         return cls(class_name=class_name, parent_classes=parent_classes, class_attributes=class_attributes,
                    instance_properties=instance_properties)
+
+    @classmethod
+    def check_collection_type_value(cls, value):
+        if isinstance(value, list) or isinstance(value, tuple):
+            for unit in value:
+                if type(unit) in cls.primitive_types:
+                    continue
+                elif type(unit) in cls.collection_types:
+                    if not cls.check_collection_type_value(unit):
+                        return False
+                else:
+                    return False
+            return True
+        elif isinstance(value, dict):
+            for k, v in value.items():
+                if type(k) not in cls.primitive_types:
+                    return False
+                if type(v) in cls.primitive_types:
+                    continue
+                elif type(v) in cls.collection_types:
+                    if not cls.check_collection_type_value(v):
+                        return False
+                else:
+                    return False
+            return True
+        else:
+            return False
+
 
 
 class ClassDefinitionWrapper(NodeModel):
