@@ -6,14 +6,14 @@ Here is an example how one can use `class4pgm` to define and persist classes.
 
 First, Let's import the lib.
 
-```
+```python
 from class4pgm import NodeModel, EdgeModel
 from class4pgm import Int, String, Bool, Float
 ```
 
 We will inherit `NodeModel` and `EdgeModel` to define our classes for nodes and edges. Datatypes like `Int` will be used to represent the field of our defined classes. Let's first define a few classes and construct some instances.
 
-```
+```python
 class Person(NodeModel):
     species = "human"
     name = String()
@@ -42,7 +42,7 @@ print(teach)
 We have defined these classes locally, and now need to persist them in the graph database.
 
 Here is the example of using `RedisGraph`.
-```
+```python
 import redis
 from redisgraph import Graph as RedisGraph
 from class4pgm import ClassManager
@@ -63,7 +63,7 @@ print(succeeded)
 `succeeded` returned from `manager.insert_defined_class([...])` indicates whether the classes are persisted successfully. `True` means a class succuessfully persisted, otherwise not. The failure to presist a class may be due to that another class defintion will the same class name has already been persisted.
 
 If you prefer to use `Neo4j`, we just need to change a bit of code:
-```
+```python
 from py2neo import Graph as NeoGraph
 
 uri = "bolt://localhost:7687"
@@ -76,7 +76,7 @@ manager = ClassManager(graph)
 `ClassManager` provides the same APIs for every graph database, so the following example should work on both `Neo4j` and `RedisGraph`. Now the continuing demonstration will be based on `RedisGraph`.
 
 Now insert some nodes and edges into the graph database.
-```
+```python
 # manager = ClassManager(graph)
 manager.model_to_db_object(john, auto_add=True)
 manager.model_to_db_object(kate, auto_add=True)
@@ -89,7 +89,7 @@ graph.flush()
 
 Now both the instances of our defined classes and the class definitions are persisted successfully. Let's try to retrieve them back from the graph database. 
 
-```
+```python
 #open a new client to the graph database
 r = redis.Redis()
 graph = RedisGraph("example", r)
@@ -120,8 +120,6 @@ for edge in edges:
 
 # clear the example graph
 graph.delete()
-
-
 ```
 
 
