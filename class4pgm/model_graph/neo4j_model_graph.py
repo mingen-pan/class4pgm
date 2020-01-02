@@ -1,46 +1,52 @@
-from py2neo import Graph, NodeMatcher, RelationshipMatcher, Node, Relationship
+from py2neo import Graph, NodeMatcher, Node, Relationship
 
 from class4pgm.class_definition import ClassManager
 from class4pgm.edge_model import EdgeModel
 from class4pgm.node_model import NodeModel
-from class4pgm.service.neo4j_service import Neo4jService
 
 
 class Neo4jModelGraph(Graph):
-    def __init__(self):
-        super().__init__()
-        self.service = Neo4jService(self)
-        self.class_manager = ClassManager(self.service)
+    def __init__(self, uri=None, **settings):
+        self.class_manager = ClassManager(self)
 
     def create_node_model(self, node_model: NodeModel):
-        self.service.model_to_node(node_model, auto_add=True)
+        self.class_manager.model_to_node(node_model, auto_add=True)
 
     def create_edge_model(self, edge_model: EdgeModel):
         """
         Addes an edge to the graph.
         """
         # Make sure edge both ends are in the graph
-        self.service.model_to_edge(edge_model, auto_add=True)
+        self.class_manager.model_to_edge(edge_model, auto_add=True)
 
     def merge_node_model(self, node_model: NodeModel):
-        node = self.service.model_to_node(node_model)
-        self.merge(node)
+        node = self.class_manager.model_to_node(node_model)
+        self.run(f"MERGE {node_model}")
+        return node
 
     def merge_edge_model(self, edge_model: EdgeModel):
         """
         Addes an edge to the graph.
         """
         # Make sure edge both ends are in the graph
-        edge = self.service.model_to_edge(edge_model)
-        self.merge(edge)
+        edge = self.class_manager.model_to_edge(edge_model)
+        in_node = edge_model.get_in_node()
+        in_node.set_alias(None)
+        out_node = edge_model.get_out_node()
+        out_node.set_alias(None)
+        edge_model.set_alias("edge_a")
+        self.run(f"MATCH {in_node}, {out_node} MERGE {edge_model}")
+        return edge
 
     def match_node(self, node_model: NodeModel):
         matcher = NodeMatcher(self).match(type(node_model).__name__, **node_model.get_properties())
         return list(matcher)
 
     def match_edge(self, edge_model: EdgeModel):
-        matcher = RelationshipMatcher(self).match(type(edge_model).__name__, **edge_model.get_properties())
-        return list(matcher)
+        if not edge_model.get_alias():
+            edge_model._alias = 'edge_a'
+        cursor = self.run(f"""Match {str(edge_model)} return {edge_model.get_alias()}""")
+        return [record[0] for record in cursor]
 
     def model_query(self, q, parameters=None, **kwparameters):
         cursor = self.run(q, parameters=parameters, **kwparameters)
@@ -49,9 +55,9 @@ class Neo4jModelGraph(Graph):
             model_row = []
             for element in record:
                 if isinstance(element, Node):
-                    model_row.append(self.service.node_to_model(element))
+                    model_row.append(self.class_manager.node_to_model(element))
                 elif isinstance(element, Relationship):
-                    model_row.append(self.service.edge_to_model(element))
+                    model_row.append(self.class_manager.edge_to_model(element))
                 else:
                     model_row.append(element)
             model_result_set.append(model_row)

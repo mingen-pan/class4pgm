@@ -43,6 +43,10 @@ class BaseModel(object):
     def get_alias(self):
         return self._alias
 
+    def set_alias(self, alias):
+        assert isinstance(alias, str) or alias is None
+        self._alias = alias
+
     def get_id(self):
         return self._id
 

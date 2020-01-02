@@ -3,24 +3,22 @@ from redisgraph import Graph, Node, Edge
 from class4pgm.class_definition import ClassManager
 from class4pgm.edge_model import EdgeModel
 from class4pgm.node_model import NodeModel
-from class4pgm.service.redis_graph_service import RedisGraphService
 
 
 class RedisModelGraph(Graph):
     def __init__(self, name, redis_conn):
         super().__init__(name, redis_conn)
-        self.service = RedisGraphService(self)
-        self.class_manager = ClassManager(self.service)
+        self.class_manager = ClassManager(self)
 
     def add_node_model(self, node_model: NodeModel):
-        self.service.model_to_node(node_model, auto_add=True)
+        self.class_manager.model_to_node(node_model, auto_add=True)
 
     def add_edge_model(self, edge_model: EdgeModel):
         """
         Addes an edge to the graph.
         """
         # Make sure edge both ends are in the graph
-        self.service.model_to_edge(edge_model, auto_add=True)
+        self.class_manager.model_to_edge(edge_model, auto_add=True)
 
     def match_node(self, node_model: NodeModel):
         if not node_model.get_alias():
@@ -41,9 +39,9 @@ class RedisModelGraph(Graph):
             model_row = []
             for element in row:
                 if isinstance(element, Node):
-                    model_row.append(self.service.node_to_model(element))
+                    model_row.append(self.class_manager.node_to_model(element))
                 elif isinstance(element, Edge):
-                    model_row.append(self.service.edge_to_model(element))
+                    model_row.append(self.class_manager.edge_to_model(element))
                 else:
                     model_row.append(element)
             model_result_set.append(model_row)
