@@ -8,7 +8,7 @@ First, Let's import the lib.
 
 ```python
 from class4pgm import NodeModel, EdgeModel
-from class4pgm import Int, String, Bool, Float
+from class4pgm.field import Int, String, Bool, Float
 ```
 
 We will inherit `NodeModel` and `EdgeModel` to define our classes for nodes and edges. Datatypes like `Int` will be used to represent the field of our defined classes. Let's first define a few classes and construct some instances.

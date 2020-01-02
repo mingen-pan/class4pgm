@@ -1,5 +1,5 @@
-from class4pgm import Int, String
 from class4pgm import NodeModel, EdgeModel
+from class4pgm.field import Int, String
 
 
 class Person(NodeModel):
