@@ -28,51 +28,107 @@ teach = Teach(in_node=kate, out_node=john, role="full time")
 print(tom)
 print(teach)
 
-import redis
-from class4pgm import RedisModelGraph
 
-# connect to the local redis
-r = redis.Redis()
+def introduction_1():
+    import redis
+    from class4pgm import RedisModelGraph
 
-# create a redis graph named example
-model_graph = RedisModelGraph("example", r)
+    # connect to the local redis
+    r = redis.Redis()
 
-succeeded = model_graph.insert_defined_class([Person, Student, Teacher, Teach])
+    # create a redis graph named example
+    model_graph = RedisModelGraph("example", r)
 
-# [True, True, True, True]
-print(succeeded)
+    succeeded = model_graph.insert_defined_class([Person, Student, Teacher, Teach])
 
-model_graph = RedisModelGraph("example", r)
-model_graph.add_node_model(john)
-model_graph.add_node_model(kate)
-model_graph.add_edge_model(teach)
-model_graph.flush()
+    # [True, True, True, True]
+    print(succeeded)
 
-"""
-    Open new client to retrieve classes and instances.
-"""
+    model_graph.add_model(john)
+    model_graph.add_model(kate)
+    model_graph.add_model(teach)
+    model_graph.flush()
 
-r = redis.Redis()
-# the defined classes will be retrieved automatically during the construction of the graph client.
-model_graph = RedisModelGraph("example", r)
+    """
+        Open new client to retrieve classes and instances.
+    """
 
-# retrieve every nodes
-results = model_graph.model_query("""Match (a) return a""")
-for result in results.result_set:
-    print(result[0])
+    r = redis.Redis()
+    # the defined classes will be retrieved automatically during the construction of the graph client.
+    model_graph = RedisModelGraph("example", r)
 
-# (:ClassDefinitionWrapper {...})
-# ...
-# (:IntlStudent:Student:Person)
-# (:Teacher:Person)
+    # retrieve every nodes
+    results = model_graph.model_query("""Match (a) return a""")
+    for result in results.result_set:
+        print(result[0])
 
-# acquire Teach class.
-Teach = model_graph.get_class('Teach')
+    # (:ClassDefinitionWrapper {...})
+    # ...
+    # (:IntlStudent:Student:Person)
+    # (:Teacher:Person)
 
-# query every edges belonging to Teach class
-edges = model_graph.match_edge(Teach(in_node=None, out_node=None))
-for edge in edges:
-    print(edge)
-# ()-[:Teach]->()
+    # acquire Teach class.
+    T = model_graph.get_class('Teach')
 
-model_graph.delete()
+    # query every edges belonging to Teach class
+    edges = model_graph.match_edge(T(in_node=None, out_node=None))
+    for edge in edges:
+        print(edge)
+    # ()-[:Teach]->()
+
+    model_graph.delete()
+
+
+def introduction_2():
+    import redis
+    from redisgraph import Graph
+    from class4pgm import ClassManager
+
+    # connect to the local redis
+    r = redis.Redis()
+    # create a redis graph named example
+    graph = Graph("example", r)
+
+    manager = ClassManager(graph)
+    succeeded = manager.insert_defined_class([Person, Student, Teacher, Teach])
+    # [True, True, True, True]
+    print(succeeded)
+
+    manager.model_to_db_object(john, auto_add=True)
+    manager.model_to_db_object(kate, auto_add=True)
+    manager.model_to_db_object(teach, auto_add=True)
+    graph.flush()
+
+    """
+        Open new client to retrieve classes and instances.
+    """
+
+    r = redis.Redis()
+    # the defined classes will be retrieved automatically during the construction of the graph client.
+    manager = ClassManager(graph)
+
+    # retrieve every nodes
+    results = graph.query("""Match (a) return a""")
+    for result in results.result_set:
+        print(manager.db_object_to_model(result[0]))
+
+    # (:ClassDefinitionWrapper {...})
+    # ...
+    # (:IntlStudent:Student:Person)
+    # (:Teacher:Person)
+
+    # acquire Teach class.
+    T = manager.get('Teach')
+
+    # query every edges belonging to Teach class
+    result = graph.query(f"Match ()-[a:{Teach.__name__}]->() return a")
+    for row in result.result_set:
+        print(manager.edge_to_model(row[0]))
+    # ()-[:Teach]->()
+
+    graph.delete()
+
+
+if __name__ == '__main__':
+    introduction_1()
+    introduction_2()

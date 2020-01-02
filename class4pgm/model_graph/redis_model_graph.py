@@ -1,5 +1,6 @@
-from redisgraph import Graph, Node, Edge
+from redisgraph import Graph
 
+from class4pgm.base_model import BaseModel
 from class4pgm.class_definition import ClassManager
 from class4pgm.edge_model import EdgeModel
 from class4pgm.node_model import NodeModel
@@ -9,6 +10,9 @@ class RedisModelGraph(Graph):
     def __init__(self, name, redis_conn):
         super().__init__(name, redis_conn)
         self.class_manager = ClassManager(self)
+
+    def add_model(self, model: BaseModel):
+        self.class_manager.model_to_db_object(model, auto_add=True)
 
     def add_node_model(self, node_model: NodeModel):
         self.class_manager.model_to_node(node_model, auto_add=True)
@@ -38,11 +42,9 @@ class RedisModelGraph(Graph):
         for row in result.result_set:
             model_row = []
             for element in row:
-                if isinstance(element, Node):
-                    model_row.append(self.class_manager.node_to_model(element))
-                elif isinstance(element, Edge):
-                    model_row.append(self.class_manager.edge_to_model(element))
-                else:
+                try:
+                    model_row.append(self.class_manager.db_object_to_model(element))
+                except RuntimeError:
                     model_row.append(element)
             model_result_set.append(model_row)
         result.result_set = model_result_set

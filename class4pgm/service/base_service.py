@@ -1,4 +1,5 @@
 import class4pgm
+from class4pgm.base_model import BaseModel
 from class4pgm.edge_model import EdgeModel
 from class4pgm.node_model import NodeModel
 from class4pgm.service.base_element import Node, Edge
@@ -24,6 +25,14 @@ class BaseService:
     def class_manager(self, val):
         assert type(val) is class4pgm.ClassManager
         self._class_manager = val
+
+    def model_to_db_object(self, instance: BaseModel, auto_add=False):
+        if isinstance(instance, NodeModel):
+            return self.model_to_node(instance, auto_add=auto_add)
+        elif isinstance(instance, EdgeModel):
+            return self.model_to_edge(instance, auto_add=auto_add)
+        else:
+            raise RuntimeError("Please provide NodeModel or EdgeModel")
 
     def model_to_node(self, instance: NodeModel, auto_add=False):
         node = Node(alias=instance.get_alias(), labels=instance.get_labels(),
@@ -55,6 +64,14 @@ class BaseService:
             edge_models[alias] = self.edge_to_model(edge)
 
         return node_models, edge_models
+
+    def db_object_to_model(self, db_object):
+        if isinstance(db_object, Node):
+            return self.node_to_model(db_object)
+        elif isinstance(db_object, Edge):
+            return self.edge_to_model(db_object)
+        else:
+            raise RuntimeError("Please provide Node or Edge from this graph database")
 
     def node_to_model(self, node: Node):
         if not isinstance(node.labels, list) or len(node.labels) == 0:

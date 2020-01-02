@@ -1,5 +1,6 @@
 import json
 
+from class4pgm.base_model import BaseModel
 from class4pgm.edge_model import EdgeModel
 from class4pgm.field import Field
 from class4pgm.node_model import NodeModel
@@ -268,6 +269,9 @@ class ClassManager:
         self.classes[name] = type(name, parent_classes, attributes)
         return self.classes[name]
 
+    def model_to_db_object(self, instance: BaseModel, auto_add=False):
+        return self.service.model_to_db_object(instance, auto_add=auto_add)
+
     def model_to_node(self, instance: NodeModel, auto_add=False):
         return self.service.model_to_node(instance, auto_add)
 
@@ -276,6 +280,9 @@ class ClassManager:
 
     def graph_to_models(self):
         return self.service.graph_to_models()
+
+    def db_object_to_model(self, db_object):
+        return self.service.db_object_to_model(db_object)
 
     def node_to_model(self, node):
         return self.service.node_to_model(node)

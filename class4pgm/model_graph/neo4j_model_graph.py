@@ -1,5 +1,6 @@
-from py2neo import Graph, NodeMatcher, Node, Relationship
+from py2neo import Graph, NodeMatcher
 
+from class4pgm.base_model import BaseModel
 from class4pgm.class_definition import ClassManager
 from class4pgm.edge_model import EdgeModel
 from class4pgm.node_model import NodeModel
@@ -8,6 +9,9 @@ from class4pgm.node_model import NodeModel
 class Neo4jModelGraph(Graph):
     def __init__(self, uri=None, **settings):
         self.class_manager = ClassManager(self)
+
+    def create_model(self, model: BaseModel):
+        self.class_manager.model_to_db_object(model, auto_add=True)
 
     def create_node_model(self, node_model: NodeModel):
         self.class_manager.model_to_node(node_model, auto_add=True)
@@ -54,11 +58,9 @@ class Neo4jModelGraph(Graph):
         for record in cursor:
             model_row = []
             for element in record:
-                if isinstance(element, Node):
-                    model_row.append(self.class_manager.node_to_model(element))
-                elif isinstance(element, Relationship):
-                    model_row.append(self.class_manager.edge_to_model(element))
-                else:
+                try:
+                    model_row.append(self.class_manager.db_object_to_model(element))
+                except RuntimeError:
                     model_row.append(element)
             model_result_set.append(model_row)
         return model_result_set

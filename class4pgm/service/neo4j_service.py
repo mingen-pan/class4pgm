@@ -1,6 +1,7 @@
 from py2neo import Graph, Node, Relationship, NodeMatcher
 
 import class4pgm
+from class4pgm.base_model import BaseModel
 from class4pgm.edge_model import EdgeModel
 from class4pgm.node_model import NodeModel
 from class4pgm.service.base_service import BaseService
@@ -10,6 +11,14 @@ class Neo4jService(BaseService):
 
     def __init__(self, graph: Graph, class_manager=None):
         super().__init__(graph=graph, class_manager=class_manager)
+
+    def model_to_db_object(self, instance: BaseModel, auto_add=False):
+        if isinstance(instance, NodeModel):
+            return self.model_to_node(instance, auto_add=auto_add)
+        elif isinstance(instance, EdgeModel):
+            return self.model_to_edge(instance, auto_add=auto_add)
+        else:
+            raise RuntimeError("Please provide NodeModel or EdgeModel")
 
     def model_to_node(self, instance: NodeModel, auto_add=False):
         node = Node(*instance.get_labels(), **instance.get_properties())
@@ -28,6 +37,14 @@ class Neo4jService(BaseService):
 
     def graph_to_models(self):
         pass
+
+    def db_object_to_model(self, db_object):
+        if isinstance(db_object, Node):
+            return self.node_to_model(db_object)
+        elif isinstance(db_object, Relationship):
+            return self.edge_to_model(db_object)
+        else:
+            raise RuntimeError("Please provide Node or Relationship from this graph database")
 
     def node_to_model(self, node: Node):
         if len(node.labels) == 0:

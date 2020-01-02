@@ -41,46 +41,67 @@ print(teach)
 
 We have defined these classes locally, and now need to persist them in the graph database.
 
+Here is the example of using `RedisGraph`.
 ```
 import redis
-from class4pgm import RedisModelGraph
+from redisgraph import Graph as RedisGraph
+from class4pgm import ClassManager
 
 # connect to the local redis
 r = redis.Redis()
+# connect to the local redisgraph named example
+graph = RedisGraph("example", r)
 
-# create a redis graph named example
-model_graph = RedisModelGraph("example", r)
+# create a class manager for this graph
+manager = ClassManager(graph)
 
-succeeded = model_graph.insert_defined_class([Person, Student, Teacher, Teach])
+succeeded = manager.insert_defined_class([Person, Student, Teacher, Teach])
 
 #[True, True, True, True]
 print(succeeded)
 ```
-`succeeded` returned from `model_graph.insert_defined_class([...])` indicates whether the classes are persisted successfully. `True` means a class succuessfully persisted, otherwise not. The failure to presist a class may be due to that another class defintion will the same class name has already been persisted.
+`succeeded` returned from `manager.insert_defined_class([...])` indicates whether the classes are persisted successfully. `True` means a class succuessfully persisted, otherwise not. The failure to presist a class may be due to that another class defintion will the same class name has already been persisted.
 
-Now also insert some nodes and edges into the graph database.
-
+If you prefer to use `Neo4j`, we just need to change a bit of code:
 ```
-model_graph = RedisModelGraph("example", r)
-model_graph.add_node_model(john)
-model_graph.add_node_model(kate)
-model_graph.add_edge_model(teach)
-model_graph.flush()
+from py2neo import Graph as NeoGraph
+
+uri = "bolt://localhost:7687"
+graph = NeoGraph(uri, auth=("neo4j", 'your_password'))
+
+# create the class manager for your graph database
+manager = ClassManager(graph)
 ```
 
-Now both the instances of our defined classes and the class definitions are persisted succuessfully. Let's try to retrieve them back from the graph database. 
+`ClassManager` provides the same APIs for every graph database, so the following example should work on both `Neo4j` and `RedisGraph`. Now the continuing demonstration will be based on `RedisGraph`.
+
+Now insert some nodes and edges into the graph database.
+```
+# manager = ClassManager(graph)
+manager.model_to_db_object(john, auto_add=True)
+manager.model_to_db_object(kate, auto_add=True)
+manager.model_to_db_object(teach, auto_add=True)
+
+# the db_object (nodes and edges) are only stored in the cache of RedisGraph, 
+# and we have to flush them.
+graph.flush()
+```
+
+Now both the instances of our defined classes and the class definitions are persisted successfully. Let's try to retrieve them back from the graph database. 
 
 ```
 #open a new client to the graph database
-
 r = redis.Redis()
-#the defined classes will be retrieved automatically during the construction of the graph client.
-model_graph = RedisModelGraph("example", r)
+graph = RedisGraph("example", r)
 
-#retrieve every nodes
-results = model_graph.model_query("""Match (a) return a""")
+#the defined classes will be retrieved automatically during the construction of the graph client.
+manager = ClassManager(graph)
+
+#retrieve every nodes using the original RedisGraph client
+results = graph.query("""Match (a) return a""")
 for result in results.result_set:
-    print(result[0])
+    # we convert the RedisGraph objects to the model objects
+    print(manager.db_object_to_model(result[0]))
     
 # (:ClassDefinitionWrapper {...})
 # ...
@@ -89,14 +110,15 @@ for result in results.result_set:
     
 
 #acquire Teach class.
-Teach = model_graph.get_class('Teach')
+Teach = manager.get('Teach')
 
 #query every edges belonging to Teach class
-edges = model_graph.match_edge(Teach(in_node=None, out_node=None))
+edges = graph.query(f"Match ()-[a:{Teach.__name__}]->() return a")
 for edge in edges:
     print(edge)
 # ()-[:Teach]->()
 
+# clear the example graph
 graph.delete()
 
 
