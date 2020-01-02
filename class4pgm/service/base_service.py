@@ -22,8 +22,7 @@ class BaseService:
 
     @class_manager.setter
     def class_manager(self, val):
-        if not val:
-            assert type(val) is class4pgm.ClassManager
+        assert type(val) is class4pgm.ClassManager
         self._class_manager = val
 
     def model_to_node(self, instance: NodeModel, auto_add=False):
@@ -81,7 +80,6 @@ class BaseService:
         else:
             out_node = edge.out_node
 
-        model_class = self._class_manager.classes[edge.relationship]
         return model_class(in_node=in_node, out_node=out_node, _id=edge.id, _alias=edge.alias, **edge.properties)
 
     def upload_class_definition_wrapper(self, wrapper):

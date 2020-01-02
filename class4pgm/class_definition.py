@@ -1,9 +1,9 @@
 import json
 
-import class4pgm.service.base_service as base_service
 from class4pgm.edge_model import EdgeModel
 from class4pgm.field import Field
 from class4pgm.node_model import NodeModel
+from class4pgm.service import ServiceGenerator
 
 
 class ClassDefinition:
@@ -74,7 +74,6 @@ class ClassDefinition:
             return True
         else:
             return False
-
 
 
 class ClassDefinitionWrapper(NodeModel):
@@ -178,18 +177,16 @@ class ClassManager:
         get the class with `name`. It will build this class and its parent classes automatically.
     """
 
-    def __init__(self, service: base_service.BaseService, class_definitions=None):
+    def __init__(self, graph):
+        self.service = ServiceGenerator(graph)
+        self.service.class_manager = self
+
         self.definition_dict = {}
         self.classes = {
             "NodeModel": NodeModel,
             "EdgeModel": EdgeModel,
             "ClassDefinitionWrapper": ClassDefinitionWrapper
         }
-        self.insert(class_definitions)
-        if service is None:
-            service = base_service.BaseService()
-        service.class_manager = self
-        self.service = service
         self.fetch_class_definitions()
         self.build()
 
@@ -270,3 +267,18 @@ class ClassManager:
         }
         self.classes[name] = type(name, parent_classes, attributes)
         return self.classes[name]
+
+    def model_to_node(self, instance: NodeModel, auto_add=False):
+        return self.service.model_to_node(instance, auto_add)
+
+    def model_to_edge(self, instance: EdgeModel, auto_add=False):
+        return self.service.model_to_edge(instance, auto_add=auto_add)
+
+    def graph_to_models(self):
+        return self.service.graph_to_models()
+
+    def node_to_model(self, node):
+        return self.service.node_to_model(node)
+
+    def edge_to_model(self, edge):
+        return self.service.edge_to_model(edge)

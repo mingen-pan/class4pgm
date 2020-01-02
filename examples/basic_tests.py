@@ -5,8 +5,6 @@ import redisgraph
 
 import class4pgm.service.base_element as base_element
 from class4pgm.class_definition import ClassManager
-from class4pgm.service.base_service import BaseService
-from class4pgm.service.redis_graph_service import RedisGraphService
 from examples import definition_forms
 
 
@@ -25,11 +23,10 @@ class TestClassManager(unittest.TestCase):
 
     def test_basic_b(self):
         graph = base_element.Graph("test")
-        service = BaseService(graph=graph)
-        old_manager = ClassManager(service)
+        old_manager = ClassManager(graph)
         old_manager.insert_defined_class(definition_forms.test_b_definition_forms)
 
-        manager = ClassManager(service)
+        manager = ClassManager(graph)
 
         Circuit = manager.get('Circuit')
         FruitFly = manager.get('FruitFly')
@@ -42,25 +39,24 @@ class TestClassManager(unittest.TestCase):
         print(own)
         print(c)
 
-        n = manager.service.model_to_node(fly)
+        n = manager.model_to_node(fly)
         print(n)
-        fly = manager.service.node_to_model(n)
+        fly = manager.node_to_model(n)
         print(fly)
 
-        n = manager.service.model_to_node(c)
+        n = manager.model_to_node(c)
         print(n)
-        c = manager.service.node_to_model(n)
+        c = manager.node_to_model(n)
         print(c)
 
-        e = manager.service.model_to_edge(own)
+        e = manager.model_to_edge(own)
         print(e)
-        own = manager.service.edge_to_model(e)
+        own = manager.edge_to_model(e)
         print(own)
 
     def test_on_redis_graph(self):
         redis_graph = redisgraph.Graph('school', self.r)
-        service = RedisGraphService(graph=redis_graph)
-        old_manager = ClassManager(service)
+        old_manager = ClassManager(redis_graph)
         old_manager.insert_defined_class(definition_forms.test_a_definition_forms)
 
         # get all the classes
@@ -75,25 +71,24 @@ class TestClassManager(unittest.TestCase):
         kate = Teacher(name="Kate", age=18, subject="Computer Science")
         teach = Teach(in_node=kate, out_node=john)
 
-        old_manager.service.model_to_node(john, auto_add=True)
-        old_manager.service.model_to_node(kate, auto_add=True)
-        old_manager.service.model_to_edge(teach, auto_add=True)
+        old_manager.model_to_node(john, auto_add=True)
+        old_manager.model_to_node(kate, auto_add=True)
+        old_manager.model_to_edge(teach, auto_add=True)
         redis_graph.flush()
 
         r = redis.Redis(host='localhost', port=6379, decode_responses=True)
         redis_graph = redisgraph.Graph('school', r)
-        service = RedisGraphService(graph=redis_graph)
-        manager = ClassManager(service)
+        manager = ClassManager(redis_graph)
 
         results = redis_graph.query("""Match (p) return p""")
         nodes = [row[0] for row in results.result_set]
-        models = [service.node_to_model(node) for node in nodes]
+        models = [manager.node_to_model(node) for node in nodes]
         for model in models:
             print(model)
 
         results = redis_graph.query("""Match ()-[a]->() return a""")
         edges = [row[0] for row in results.result_set]
-        models = [service.edge_to_model(edge) for edge in edges]
+        models = [manager.edge_to_model(edge) for edge in edges]
         for model in models:
             print(model)
 
@@ -101,8 +96,7 @@ class TestClassManager(unittest.TestCase):
 
     def test_duplicate_upload_class(self):
         redis_graph = redisgraph.Graph('duplicate_upload_class', self.r)
-        service = RedisGraphService(graph=redis_graph)
-        manager = ClassManager(service)
+        manager = ClassManager(redis_graph)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
@@ -112,8 +106,7 @@ class TestClassManager(unittest.TestCase):
 
     def test_delete_class(self):
         redis_graph = redisgraph.Graph('delete_class', self.r)
-        service = RedisGraphService(graph=redis_graph)
-        manager = ClassManager(service)
+        manager = ClassManager(redis_graph)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
         manager.delete([raw_definition.__name__ for raw_definition in definition_forms.test_a_definition_forms])
         result = redis_graph.query("""Match (a:ClassDefinitionWrapper) return count(a) as cnt""")
@@ -134,12 +127,11 @@ class TestClassManager(unittest.TestCase):
 
     def test_upload_embedded_list_to_redis_graph(self):
         redis_graph = redisgraph.Graph('embedded_list', self.r)
-        service = RedisGraphService(graph=redis_graph)
-        manager = ClassManager(service)
+        manager = ClassManager(redis_graph)
         manager.insert_defined_class(definition_forms.ExceptionNodeB)
         T = manager.get("ExceptionNodeB")
         a = T(a=100, b=[123, "abc", [[99, True], []]])
-        service.model_to_node(a, auto_add=True)
+        manager.model_to_node(a, auto_add=True)
         redis_graph.flush()
         res = redis_graph.query("match (a:ExceptionNodeB) return a")
         a = res.result_set[0][0]

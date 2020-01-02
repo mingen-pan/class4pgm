@@ -53,7 +53,7 @@ class Field(object):
                 if type(unit) not in datatype_dict.values():
                     self.raise_exception(f"{type(unit)} not supported as list element")
                 if isinstance(unit, list):
-                    check_list_type(unit)
+                    self.raise_exception("nested array is not supported")
 
         if self.datatype is list:
             check_list_type(value)

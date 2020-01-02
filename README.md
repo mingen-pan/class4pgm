@@ -1,8 +1,8 @@
 # class4pgm
-`class4pgm` is a library to define and persist classes of the nodes and edges of property graph models (e.g., RedisGraph and Neo4j). The definition of a class is concise and follows the convention used by other ogm libs (e.g., XXX). However, this library also allows users to persist their defined classes in graph databases, so that different clients can share the same defined class schema. `class4pgm` is graph-database independent, and current supports for RedisGraph. One can always convert the instances of their defined classes into `Cypher`, a generally graph query language used by multiple graph databases.
+`class4pgm` is a library to define and persist classes of the nodes and edges of property graph models (e.g., RedisGraph and Neo4j). The definition of a class is concise and follows the convention used by other ogm libs (e.g., `py2neo`). However, this library also allows users to persist their defined classes in graph databases, so that different clients can share their defined class schema. `class4pgm` is graph-database independent, and current supports for `RedisGraph` and `Neo4j`. One can always convert the instances of their defined classes into the nodes and edges compatible with `Cypher`, a generally graph query language used by multiple graph databases.
 
 
-Here is an example how one can use `class4pgm`  to define and persist classes.
+Here is an example how one can use `class4pgm` to define and persist classes.
 
 First, Let's import the lib.
 

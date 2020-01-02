@@ -3,7 +3,6 @@ import unittest
 from py2neo import Graph, Node, Relationship, NodeMatcher, RelationshipMatcher
 
 from class4pgm import ClassManager
-from class4pgm.service.neo4j_service import Neo4jService
 from examples import definition_forms
 
 
@@ -29,8 +28,7 @@ class TestNeo4j(unittest.TestCase):
         self.graph.delete_all()
 
     def test_on_neo4j_graph(self):
-        service = Neo4jService(graph=self.graph)
-        old_manager = ClassManager(service)
+        old_manager = ClassManager(self.graph)
         old_manager.insert_defined_class(definition_forms.test_a_definition_forms)
 
         # get all the classes
@@ -50,24 +48,22 @@ class TestNeo4j(unittest.TestCase):
         old_manager.service.model_to_edge(teach, auto_add=True)
 
         self.setUp()
-        service = Neo4jService(graph=self.graph)
-        manager = ClassManager(service)
+        manager = ClassManager(self.graph)
 
         matcher = NodeMatcher(self.graph).match()
-        models = [service.node_to_model(node) for node in list(matcher)]
+        models = [manager.node_to_model(node) for node in list(matcher)]
         for model in models:
             print(model)
 
         matcher = RelationshipMatcher(self.graph).match()
-        models = [service.edge_to_model(edge) for edge in list(matcher)]
+        models = [manager.edge_to_model(edge) for edge in list(matcher)]
         for model in models:
             print(model)
 
         self.graph.delete_all()
 
     def test_duplicate_upload_class(self):
-        service = Neo4jService(self.graph)
-        manager = ClassManager(service)
+        manager = ClassManager(self.graph)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
@@ -79,8 +75,7 @@ class TestNeo4j(unittest.TestCase):
         self.graph.delete_all()
 
     def test_delete_class(self):
-        service = Neo4jService(self.graph)
-        manager = ClassManager(service)
+        manager = ClassManager(self.graph)
         manager.insert_defined_class(definition_forms.test_a_definition_forms)
         manager.delete([raw_definition.__name__ for raw_definition in definition_forms.test_a_definition_forms])
         result = NodeMatcher(self.graph).match("ClassDefinitionWrapper")
